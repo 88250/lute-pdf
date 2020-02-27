@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/88250/lute"
+	"github.com/88250/lute/parse"
 	"log"
 	"math"
 
@@ -45,9 +45,19 @@ func main() {
 	pdf.SetFontWithStyle("msyh", gopdf.Regular, int(fontSize))
 	pdf.SetFont("msyh", "", int(fontSize))
 
-	markdown := "这是一篇讲解如何正确使用 *Markdown* 的排版示例，学会这个很有必要，能让你的文章有更佳清晰的排版。"
-	luteEngine := lute.New()
-	text, _ := luteEngine.MarkdownStr("", markdown)
+	markdown := []byte("这是一篇讲解如何正确使用 *Markdown* 的排版示例，学会这个很有必要，能让你的文章有更佳清晰的排版。")
+	tree, err := parse.Parse("", markdown, &parse.Options{
+
+	})
+	if nil != err {
+		log.Fatal(err)
+	}
+	renderer := NewPdfRenderer(tree)
+	output, err := renderer.Render()
+	if nil != err {
+		log.Fatal(err)
+	}
+	text := string(output)
 
 	rect := &gopdf.Rect{W: gopdf.PageSizeA4.W - x*2, H: gopdf.PageSizeA4.H}
 	pdf.MultiCell(rect, text)
