@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/88250/lute"
 	"log"
 	"math"
 
@@ -44,8 +45,12 @@ func main() {
 	pdf.SetFontWithStyle("msyh", gopdf.Regular, int(fontSize))
 	pdf.SetFont("msyh", "", int(fontSize))
 
+	markdown := "这是一篇讲解如何正确使用 *Markdown* 的排版示例，学会这个很有必要，能让你的文章有更佳清晰的排版。"
+	luteEngine := lute.New()
+	text, _ := luteEngine.MarkdownStr("", markdown)
+
 	rect := &gopdf.Rect{W: gopdf.PageSizeA4.W - x*2, H: gopdf.PageSizeA4.H}
-	pdf.MultiCell(rect, "这是一篇讲解如何正确使用 Markdown 的排版示例，学会这个很有必要，能让你的文章有更佳清晰的排版。")
+	pdf.MultiCell(rect, text)
 
 	pdf.WritePdf("sample.pdf")
 
