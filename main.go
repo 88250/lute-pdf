@@ -13,12 +13,12 @@ func main() {
 	pdf.AddPage()
 
 	var err error
-	err = pdf.AddTTFFont("msyh", "msyh.ttf")
+	err = pdf.AddTTFFont("msyh", "fonts/msyh.ttf")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = pdf.AddTTFFontWithOption("msyhb", "msyhb.ttf", gopdf.TtfOption{Style: gopdf.Bold})
+	err = pdf.AddTTFFontWithOption("msyhb", "fonts/msyhb.ttf", gopdf.TtfOption{Style: gopdf.Bold})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -47,6 +47,6 @@ func main() {
 	rect := &gopdf.Rect{W: gopdf.PageSizeA4.W - x*2, H: gopdf.PageSizeA4.H}
 	pdf.MultiCell(rect, "这是一篇讲解如何正确使用 Markdown 的排版示例，学会这个很有必要，能让你的文章有更佳清晰的排版。")
 
-	pdf.WritePdf("hello.pdf")
+	pdf.WritePdf("sample.pdf")
 
 }
