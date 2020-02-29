@@ -1,15 +1,16 @@
 package main
 
 import (
-	"github.com/88250/lute/parse"
 	"log"
 	"math"
+
+	"github.com/88250/lute/parse"
 
 	"github.com/signintech/gopdf"
 )
 
 func main() {
-	pdf := gopdf.GoPdf{}
+	pdf := &gopdf.GoPdf{}
 	pdf.Start(gopdf.Config{PageSize: *gopdf.PageSizeA4}) // 595.28, 841.89 = A4
 	pdf.AddPage()
 
@@ -46,13 +47,11 @@ func main() {
 	pdf.SetFont("msyh", "", int(fontSize))
 
 	markdown := []byte("这是一篇讲解如何正确使用 *Markdown* 的排版示例，学会这个很有必要，能让你的文章有更佳清晰的排版。")
-	tree, err := parse.Parse("", markdown, &parse.Options{
-
-	})
+	tree, err := parse.Parse("", markdown, &parse.Options{})
 	if nil != err {
 		log.Fatal(err)
 	}
-	renderer := NewPdfRenderer(tree)
+	renderer := NewPdfRenderer(tree, pdf)
 	output, err := renderer.Render()
 	if nil != err {
 		log.Fatal(err)

@@ -6,6 +6,7 @@ import (
 	"github.com/88250/lute/parse"
 	"github.com/88250/lute/render"
 	"github.com/88250/lute/util"
+	"github.com/signintech/gopdf"
 	"strconv"
 	"strings"
 	"unicode"
@@ -17,11 +18,13 @@ type PdfRenderer struct {
 	*render.BaseRenderer
 	needRenderFootnotesDef bool
 	headingCnt             int
+
+	pdf *gopdf.GoPdf
 }
 
 // NewPdfRenderer 创建一个 HTML 渲染器。
-func NewPdfRenderer(tree *parse.Tree) render.Renderer {
-	ret := &PdfRenderer{render.NewBaseRenderer(tree), false, 0}
+func NewPdfRenderer(tree *parse.Tree, pdf *gopdf.GoPdf) render.Renderer {
+	ret := &PdfRenderer{render.NewBaseRenderer(tree), false, 0, pdf}
 	ret.RendererFuncs[ast.NodeDocument] = ret.renderDocument
 	ret.RendererFuncs[ast.NodeParagraph] = ret.renderParagraph
 	ret.RendererFuncs[ast.NodeText] = ret.renderText
@@ -153,7 +156,7 @@ func (r *PdfRenderer) RenderFootnotesDefs(context *parse.Context) []byte {
 		tree.Context.Tree = tree
 		tree.Root = &ast.Node{Type: ast.NodeDocument}
 		tree.Root.AppendChild(def)
-		defRenderer := NewPdfRenderer(tree)
+		defRenderer := NewPdfRenderer(tree, r.pdf)
 		lc := tree.Root.LastDeepestChild()
 		for i = len(def.FootnotesRefs) - 1; 0 <= i; i-- {
 			ref := def.FootnotesRefs[i]
@@ -536,6 +539,8 @@ func (r *PdfRenderer) renderEmphasis(node *ast.Node, entering bool) ast.WalkStat
 
 func (r *PdfRenderer) renderEmAsteriskOpenMarker(node *ast.Node, entering bool) ast.WalkStatus {
 	r.tag("em", nil, false)
+	r.pdf.SetFontWithStyle("msyhb", gopdf.Bold, 16)
+
 	return ast.WalkStop
 }
 
