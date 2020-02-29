@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"math"
 	"strconv"
 	"strings"
 	"unicode"
@@ -26,7 +27,12 @@ type PdfRenderer struct {
 	factor       float64      // 字体、行高大小倍数
 	fontSize     float64      // 字体大小
 	lineHeight   float64      // 行高
-	heading2Size float64      // 二级标题字体大小
+	heading1Size float64      // 一级标题大小
+	heading2Size float64      // 二级标题大小
+	heading3Size float64      // 三级标题大小
+	heading4Size float64      // 四级标题大小
+	heading5Size float64      // 五级标题大小
+	heading6Size float64      // 六级标题大小
 	margin       float64      // 页边距
 	x            float64      // 当前横坐标
 	y            float64      // 当前纵坐标
@@ -43,7 +49,10 @@ func NewPdfRenderer(tree *parse.Tree) render.Renderer {
 	ret.fontSize = 16 * ret.factor
 	ret.lineHeight = 24.0 * ret.factor
 	ret.heading2Size = 24 * ret.factor
+	ret.heading3Size = 20 * ret.factor
 	ret.margin = 30 * ret.factor
+	pdf.SetX(ret.margin)
+	pdf.SetY(ret.margin)
 
 	var err error
 	err = pdf.AddTTFFont("msyh", "fonts/msyh.ttf")
@@ -650,23 +659,44 @@ func (r *PdfRenderer) renderBlockquoteMarker(node *ast.Node, entering bool) ast.
 func (r *PdfRenderer) renderHeading(node *ast.Node, entering bool) ast.WalkStatus {
 	if entering {
 		r.Newline()
-		level := " 123456"[node.HeadingLevel : node.HeadingLevel+1]
-		r.WriteString("<h" + level)
-		if r.Option.ToC {
-			r.WriteString(" id=\"toc_h" + level + "_" + strconv.Itoa(r.headingCnt) + "\"")
-			r.headingCnt++
+		r.pdf.SetY(r.pdf.GetY() + 6)
+		headingSize := r.heading2Size
+		switch node.HeadingLevel {
+		case 1:
+			headingSize = r.heading1Size
+		case 2:
+			headingSize = r.heading2Size
+		case 3:
+			headingSize = r.heading3Size
+		case 4:
+			headingSize = r.heading4Size
+		case 5:
+			headingSize = r.heading5Size
+		case 6:
+			headingSize = r.heading6Size
+		default:
+			headingSize = r.fontSize
 		}
-		r.WriteString(">")
-		if r.Option.HeadingAnchor {
-			anchor := node.Text()
-			anchor = strings.ReplaceAll(anchor, " ", "-")
-			anchor = strings.ReplaceAll(anchor, ".", "")
-			r.tag("a", [][]string{{"id", "vditorAnchor-" + anchor}, {"class", "vditor-anchor"}, {"href", "#" + anchor}}, false)
-			r.WriteString(`<svg viewBox="0 0 16 16" version="1.1" width="16" height="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg>`)
-			r.tag("/a", nil, false)
-		}
+
+		r.pdf.SetFontWithStyle("msyhb", gopdf.Bold, int(math.Round(headingSize)))
+
+		// TODO: ToC
+		//if r.Option.ToC {
+		//	r.WriteString(" id=\"toc_h" + fmt.Sprint(node.HeadingLevel) + "_" + strconv.Itoa(r.headingCnt) + "\"")
+		//	r.headingCnt++
+		//}
+		// TODO: HeadingAnchor
+		//if r.Option.HeadingAnchor {
+		//	anchor := node.Text()
+		//	anchor = strings.ReplaceAll(anchor, " ", "-")
+		//	anchor = strings.ReplaceAll(anchor, ".", "")
+		//	r.tag("a", [][]string{{"id", "vditorAnchor-" + anchor}, {"class", "vditor-anchor"}, {"href", "#" + anchor}}, false)
+		//	r.WriteString(`<svg viewBox="0 0 16 16" version="1.1" width="16" height="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg>`)
+		//	r.tag("/a", nil, false)
+		//}
 	} else {
-		r.WriteString("</h" + " 123456"[node.HeadingLevel:node.HeadingLevel+1] + ">")
+		r.pdf.SetFontWithStyle("msyh", gopdf.Regular, int(r.fontSize))
+		r.pdf.SetY(r.pdf.GetY() + 6)
 		r.Newline()
 	}
 	return ast.WalkContinue
