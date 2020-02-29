@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"unicode"
@@ -32,13 +33,28 @@ type PdfRenderer struct {
 }
 
 // NewPdfRenderer 创建一个 HTML 渲染器。
-func NewPdfRenderer(tree *parse.Tree, pdf *gopdf.GoPdf) render.Renderer {
+func NewPdfRenderer(tree *parse.Tree) render.Renderer {
+	pdf := &gopdf.GoPdf{}
+	pdf.Start(gopdf.Config{PageSize: *gopdf.PageSizeA4}) // 595.28, 841.89 = A4
+	pdf.AddPage()
+
 	ret := &PdfRenderer{BaseRenderer: render.NewBaseRenderer(tree), needRenderFootnotesDef: false, headingCnt: 0, pdf: pdf}
 	ret.factor = 0.8
 	ret.fontSize = 16 * ret.factor
 	ret.lineHeight = 24.0 * ret.factor
 	ret.heading2Size = 24 * ret.factor
 	ret.margin = 30 * ret.factor
+
+	var err error
+	err = pdf.AddTTFFont("msyh", "fonts/msyh.ttf")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = pdf.AddTTFFontWithOption("msyhb", "fonts/msyhb.ttf", gopdf.TtfOption{Style: gopdf.Bold})
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	pdf.SetFontWithStyle("msyh", gopdf.Regular, int(ret.fontSize))
 	pdf.SetMargins(ret.margin, ret.margin, ret.margin, ret.margin)
@@ -174,7 +190,7 @@ func (r *PdfRenderer) RenderFootnotesDefs(context *parse.Context) []byte {
 		tree.Context.Tree = tree
 		tree.Root = &ast.Node{Type: ast.NodeDocument}
 		tree.Root.AppendChild(def)
-		defRenderer := NewPdfRenderer(tree, r.pdf)
+		defRenderer := NewPdfRenderer(tree)
 		lc := tree.Root.LastDeepestChild()
 		for i = len(def.FootnotesRefs) - 1; 0 <= i; i-- {
 			ref := def.FootnotesRefs[i]
@@ -474,6 +490,11 @@ func (r *PdfRenderer) renderInlineHTML(node *ast.Node, entering bool) ast.WalkSt
 }
 
 func (r *PdfRenderer) renderDocument(node *ast.Node, entering bool) ast.WalkStatus {
+	if !entering {
+		if err := r.pdf.WritePdf(r.Tree.Name + ".pdf"); nil != err {
+			log.Fatal(err)
+		}
+	}
 	return ast.WalkContinue
 }
 
