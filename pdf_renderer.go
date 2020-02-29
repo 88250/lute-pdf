@@ -2,19 +2,16 @@ package main
 
 import (
 	"fmt"
-	"log"
-	"math"
-	"strconv"
-	"strings"
-	"unicode"
-	"unicode/utf8"
-
 	"github.com/88250/lute/ast"
 	"github.com/88250/lute/lex"
 	"github.com/88250/lute/parse"
 	"github.com/88250/lute/render"
 	"github.com/88250/lute/util"
 	"github.com/signintech/gopdf"
+	"log"
+	"math"
+	"strconv"
+	"strings"
 )
 
 // PdfRenderer 描述了 PDF 渲染器。
@@ -389,7 +386,7 @@ func (r *PdfRenderer) renderStrikethrough1OpenMarker(node *ast.Node, entering bo
 }
 
 func (r *PdfRenderer) renderStrikethrough1CloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pdf.Line(r.x, r.y+r.fontSize/2, r.pdf.GetX(), r.pdf.GetY() + +r.fontSize/2)
+	r.pdf.Line(r.x, r.y+r.fontSize/2, r.pdf.GetX(), r.pdf.GetY()+r.fontSize/2)
 	return ast.WalkStop
 }
 
@@ -400,7 +397,7 @@ func (r *PdfRenderer) renderStrikethrough2OpenMarker(node *ast.Node, entering bo
 }
 
 func (r *PdfRenderer) renderStrikethrough2CloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pdf.Line(r.x, r.y+r.fontSize/2, r.pdf.GetX(), r.pdf.GetY() + +r.fontSize/2)
+	r.pdf.Line(r.x, r.y+r.fontSize/2, r.pdf.GetX(), r.pdf.GetY()+r.fontSize/2)
 	return ast.WalkStop
 }
 
@@ -525,15 +522,15 @@ func (r *PdfRenderer) renderParagraph(node *ast.Node, entering bool) ast.WalkSta
 }
 
 func (r *PdfRenderer) renderText(node *ast.Node, entering bool) ast.WalkStatus {
-	if r.Option.AutoSpace {
-		r.Space(node)
-	}
-	if r.Option.FixTermTypo {
-		r.FixTermTypo(node)
-	}
-	if r.Option.ChinesePunct {
-		r.ChinesePunct(node)
-	}
+	//if r.Option.AutoSpace {
+	//	r.Space(node)
+	//}
+	//if r.Option.FixTermTypo {
+	//	r.FixTermTypo(node)
+	//}
+	//if r.Option.ChinesePunct {
+	//	r.ChinesePunct(node)
+	//}
 
 	text := util.BytesToStr(util.EscapeHTML(node.Tokens))
 	width := gopdf.PageSizeA4.W - r.margin - r.pdf.GetX()
@@ -553,42 +550,42 @@ func (r *PdfRenderer) renderText(node *ast.Node, entering bool) ast.WalkStatus {
 
 func (r *PdfRenderer) renderCodeSpan(node *ast.Node, entering bool) ast.WalkStatus {
 	if entering {
-		if r.Option.AutoSpace {
-			if text := node.PreviousNodeText(); "" != text {
-				lastc, _ := utf8.DecodeLastRuneInString(text)
-				if unicode.IsLetter(lastc) || unicode.IsDigit(lastc) {
-					r.WriteByte(lex.ItemSpace)
-				}
-			}
-		}
+		//if r.Option.AutoSpace {
+		//	if text := node.PreviousNodeText(); "" != text {
+		//		lastc, _ := utf8.DecodeLastRuneInString(text)
+		//		if unicode.IsLetter(lastc) || unicode.IsDigit(lastc) {
+		//			r.WriteByte(lex.ItemSpace)
+		//		}
+		//	}
+		//}
 	} else {
-		if r.Option.AutoSpace {
-			if text := node.NextNodeText(); "" != text {
-				firstc, _ := utf8.DecodeRuneInString(text)
-				if unicode.IsLetter(firstc) || unicode.IsDigit(firstc) {
-					r.WriteByte(lex.ItemSpace)
-				}
-			}
-		}
+		//if r.Option.AutoSpace {
+		//	if text := node.NextNodeText(); "" != text {
+		//		firstc, _ := utf8.DecodeRuneInString(text)
+		//		if unicode.IsLetter(firstc) || unicode.IsDigit(firstc) {
+		//			r.WriteByte(lex.ItemSpace)
+		//		}
+		//	}
+		//}
 	}
 	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderCodeSpanOpenMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pdf.SetFillColor(227, 236, 245)
 	return ast.WalkStop
 }
 
 func (r *PdfRenderer) renderCodeSpanContent(node *ast.Node, entering bool) ast.WalkStatus {
 	content := util.BytesToStr(util.EscapeHTML(node.Tokens))
 	width, _ := r.pdf.MeasureTextWidth(content)
+	r.pdf.SetFillColor(227, 236, 245)
 	r.pdf.RectFromUpperLeftWithStyle(r.pdf.GetX(), r.pdf.GetY(), width, r.fontSize, "F")
+	r.pdf.SetFillColor(0, 0, 0)
 	r.WriteString(content)
 	return ast.WalkStop
 }
 
 func (r *PdfRenderer) renderCodeSpanCloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pdf.SetFillColor(0, 0, 0)
 	return ast.WalkStop
 }
 
@@ -655,7 +652,7 @@ func (r *PdfRenderer) renderBlockquote(node *ast.Node, entering bool) ast.WalkSt
 		r.Newline()
 		r.pdf.SetTextColor(106, 115, 125)
 		r.x = r.pdf.GetX()
-		r.pdf.SetX(r.x + r.margin)
+		r.pdf.SetX(r.x + r.fontSize)
 	} else {
 		r.pdf.SetX(r.pdf.GetX() - r.x + r.margin)
 		r.pdf.SetTextColor(0, 0, 0)
@@ -768,20 +765,12 @@ func (r *PdfRenderer) renderThematicBreak(node *ast.Node, entering bool) ast.Wal
 }
 
 func (r *PdfRenderer) renderHardBreak(node *ast.Node, entering bool) ast.WalkStatus {
-	if entering {
-		r.tag("br", nil, true)
-		r.Newline()
-	}
+	r.Newline()
 	return ast.WalkStop
 }
 
 func (r *PdfRenderer) renderSoftBreak(node *ast.Node, entering bool) ast.WalkStatus {
-	if r.Option.SoftBreak2HardBreak {
-		r.tag("br", nil, true)
-		r.Newline()
-	} else {
-		r.Newline()
-	}
+	r.Newline()
 	return ast.WalkStop
 }
 
@@ -805,7 +794,7 @@ func (r *PdfRenderer) tag(name string, attrs [][]string, selfclosing bool) {
 
 // WriteByte 输出一个字节 c。
 func (r *PdfRenderer) WriteByte(c byte) {
-	r.Writer.WriteByte(c)
+	r.pdf.Cell(nil, string(c))
 	r.LastOut = c
 }
 

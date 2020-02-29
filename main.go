@@ -9,11 +9,11 @@ import (
 func main() {
 	markdown := []byte(sample)
 	tree, err := parse.Parse("sample", markdown, &parse.Options{
-		GFMTable:true,
-		GFMTaskListItem:true,
-		GFMStrikethrough:true,
-		GFMAutoLink:true,
-		SoftBreak2HardBreak:true})
+		GFMTable:            true,
+		GFMTaskListItem:     true,
+		GFMStrikethrough:    true,
+		GFMAutoLink:         true,
+		SoftBreak2HardBreak: true})
 	if nil != err {
 		log.Fatal(err)
 	}
@@ -23,7 +23,6 @@ func main() {
 		log.Fatal(err)
 	}
 }
-
 
 const sample = `Vditor 是一款**所见即所得**编辑器，支持 *Markdown*。
 
