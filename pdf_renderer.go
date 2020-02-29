@@ -375,30 +375,32 @@ func (r *PdfRenderer) renderTable(node *ast.Node, entering bool) ast.WalkStatus 
 
 func (r *PdfRenderer) renderStrikethrough(node *ast.Node, entering bool) ast.WalkStatus {
 	if entering {
-		r.TextAutoSpacePrevious(node)
+		// TODO: r.TextAutoSpacePrevious(node)
 	} else {
-		r.TextAutoSpaceNext(node)
+		// TODO: r.TextAutoSpaceNext(node)
 	}
 	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderStrikethrough1OpenMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.tag("del", nil, false)
+	r.x = r.pdf.GetX()
+	r.y = r.pdf.GetY()
 	return ast.WalkStop
 }
 
 func (r *PdfRenderer) renderStrikethrough1CloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.tag("/del", nil, false)
+	r.pdf.Line(r.x, r.y+r.fontSize/2, r.pdf.GetX(), r.pdf.GetY() + +r.fontSize/2)
 	return ast.WalkStop
 }
 
 func (r *PdfRenderer) renderStrikethrough2OpenMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.tag("del", nil, false)
+	r.x = r.pdf.GetX()
+	r.y = r.pdf.GetY()
 	return ast.WalkStop
 }
 
 func (r *PdfRenderer) renderStrikethrough2CloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.tag("/del", nil, false)
+	r.pdf.Line(r.x, r.y+r.fontSize/2, r.pdf.GetX(), r.pdf.GetY() + +r.fontSize/2)
 	return ast.WalkStop
 }
 
@@ -534,7 +536,11 @@ func (r *PdfRenderer) renderText(node *ast.Node, entering bool) ast.WalkStatus {
 	}
 
 	text := util.BytesToStr(util.EscapeHTML(node.Tokens))
-	lines, _ := r.pdf.SplitText(text, gopdf.PageSizeA4.W-r.margin-r.pdf.GetX())
+	width := gopdf.PageSizeA4.W - r.margin - r.pdf.GetX()
+	if 0 > width {
+		width = gopdf.PageSizeA4.W - r.margin
+	}
+	lines, _ := r.pdf.SplitText(text, width)
 	isMultiLine := 1 < len(lines)
 	for _, line := range lines {
 		r.WriteString(line)
@@ -569,25 +575,28 @@ func (r *PdfRenderer) renderCodeSpan(node *ast.Node, entering bool) ast.WalkStat
 }
 
 func (r *PdfRenderer) renderCodeSpanOpenMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.WriteString("<code>")
+	r.pdf.SetFillColor(227, 236, 245)
 	return ast.WalkStop
 }
 
 func (r *PdfRenderer) renderCodeSpanContent(node *ast.Node, entering bool) ast.WalkStatus {
-	r.Write(util.EscapeHTML(node.Tokens))
+	content := util.BytesToStr(util.EscapeHTML(node.Tokens))
+	width, _ := r.pdf.MeasureTextWidth(content)
+	r.pdf.RectFromUpperLeftWithStyle(r.pdf.GetX(), r.pdf.GetY(), width, r.fontSize, "F")
+	r.WriteString(content)
 	return ast.WalkStop
 }
 
 func (r *PdfRenderer) renderCodeSpanCloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.WriteString("</code>")
+	r.pdf.SetFillColor(0, 0, 0)
 	return ast.WalkStop
 }
 
 func (r *PdfRenderer) renderEmphasis(node *ast.Node, entering bool) ast.WalkStatus {
 	if entering {
-		r.TextAutoSpacePrevious(node)
+		// TODO: r.TextAutoSpacePrevious(node)
 	} else {
-		r.TextAutoSpaceNext(node)
+		// TODO: r.TextAutoSpaceNext(node)
 	}
 	return ast.WalkContinue
 }
@@ -614,9 +623,9 @@ func (r *PdfRenderer) renderEmUnderscoreCloseMarker(node *ast.Node, entering boo
 
 func (r *PdfRenderer) renderStrong(node *ast.Node, entering bool) ast.WalkStatus {
 	if entering {
-		r.TextAutoSpacePrevious(node)
+		// TODO: r.TextAutoSpacePrevious(node)
 	} else {
-		r.TextAutoSpaceNext(node)
+		// TODO: r.TextAutoSpaceNext(node)
 	}
 	return ast.WalkContinue
 }
@@ -648,7 +657,7 @@ func (r *PdfRenderer) renderBlockquote(node *ast.Node, entering bool) ast.WalkSt
 		r.x = r.pdf.GetX()
 		r.pdf.SetX(r.x + r.margin)
 	} else {
-		r.pdf.SetX(r.pdf.GetX() - r.x)
+		r.pdf.SetX(r.pdf.GetX() - r.x + r.margin)
 		r.pdf.SetTextColor(0, 0, 0)
 		r.Newline()
 	}
@@ -727,10 +736,10 @@ func (r *PdfRenderer) renderListItem(node *ast.Node, entering bool) ast.WalkStat
 			nil != node.FirstChild && nil != node.FirstChild.FirstChild && ast.NodeTaskListItemMarker == node.FirstChild.FirstChild.Type {
 			r.WriteString(fmt.Sprintf("%s", node.ListData.Marker))
 		} else {
-			if "*" == marker {
+			if "*" == marker || "-" == marker || "+" == marker {
 				r.WriteString("● ")
 			} else {
-				r.WriteString(marker + ". ")
+				r.WriteString(fmt.Sprint(node.Num) + ". ")
 			}
 		}
 	} else {

@@ -8,7 +8,12 @@ import (
 
 func main() {
 	markdown := []byte(sample)
-	tree, err := parse.Parse("sample", markdown, &parse.Options{})
+	tree, err := parse.Parse("sample", markdown, &parse.Options{
+		GFMTable:true,
+		GFMTaskListItem:true,
+		GFMStrikethrough:true,
+		GFMAutoLink:true,
+		SoftBreak2HardBreak:true})
 	if nil != err {
 		log.Fatal(err)
 	}
@@ -18,6 +23,7 @@ func main() {
 		log.Fatal(err)
 	}
 }
+
 
 const sample = `Vditor 是一款**所见即所得**编辑器，支持 *Markdown*。
 
@@ -38,16 +44,14 @@ const sample = `Vditor 是一款**所见即所得**编辑器，支持 *Markdown*
 
 这段内容展示了在内容里面一些排版格式，比如：
 
-- **加粗** - ` + "`" + `**加粗**` + "`" + `
-- *倾斜* - ` + "`" + `*倾斜*` + "`" + `
-- ~~删除线~~ - ` + "`" + `~~删除线~~` + "`" + `
-- ` + "`" + `Code 标记` + "`" + ` - ` + "`" + `Code 标记` + "`" + `
-- [超级链接](https://hacpai.com) - ` + "`" + `[超级链接](https://hacpai.com)` + "`" + `
-- [username@gmail.com](mailto:username@gmail.com) - ` + "`" + `[username@gmail.com](mailto:username@gmail.com)` + "`" + `
+- **加粗** - ` + "`**加粗**`" + `
+- *倾斜* - ` + "`*倾斜*`" + `
+- ~~删除线~~ - ` + "`~~删除线~~`" + `
+- ` + "`Code 标记` - " + "`` `Code 标记` ``" + `
+- [超级链接](https://hacpai.com) - ` + "`[超级链接](https://hacpai.com)`" + `
+- [username@gmail.com](mailto:username@gmail.com) - ` + "`[username@gmail.com](mailto:username@gmail.com)`" + `
 
 ### 提及用户
 
-@Vanessa 通过 `+"`" + `@User` + "`" + ` 可以在内容中提及用户，被提及的用户将会收到系统通知。
+@Vanessa 通过 ` + "`@User`" + ` 可以在内容中提及用户，被提及的用户将会收到系统通知。
 `
-
-//const sample = `Vditor 是一款**所见即所得**编辑器，支持 *Markdown*。`
