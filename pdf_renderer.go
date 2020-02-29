@@ -514,7 +514,9 @@ func (r *PdfRenderer) renderParagraph(node *ast.Node, entering bool) ast.WalkSta
 
 	if entering {
 		r.Newline()
+		r.pdf.SetY(r.pdf.GetY() + 6)
 	} else {
+		r.pdf.SetY(r.pdf.GetY() + 6)
 		r.Newline()
 	}
 	return ast.WalkContinue
@@ -642,11 +644,12 @@ func (r *PdfRenderer) renderStrongU8eCloseMarker(node *ast.Node, entering bool) 
 func (r *PdfRenderer) renderBlockquote(node *ast.Node, entering bool) ast.WalkStatus {
 	if entering {
 		r.Newline()
-		r.WriteString("<blockquote>")
-		r.Newline()
+		r.pdf.SetTextColor(106, 115, 125)
+		r.x = r.pdf.GetX()
+		r.pdf.SetX(r.x + r.margin)
 	} else {
-		r.Newline()
-		r.WriteString("</blockquote>")
+		r.pdf.SetX(r.pdf.GetX() - r.x)
+		r.pdf.SetTextColor(0, 0, 0)
 		r.Newline()
 	}
 	return ast.WalkContinue

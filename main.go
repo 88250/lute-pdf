@@ -31,6 +31,23 @@ const sample = `Vditor 是一款**所见即所得**编辑器，支持 *Markdown*
 这是一篇讲解如何正确使用 **Markdown** 的排版示例，学会这个很有必要，能让你的文章有更佳清晰的排版。
 
 > 引用文本：Markdown is a text formatting syntax inspired
+
+## 语法指导
+
+### 普通内容
+
+这段内容展示了在内容里面一些排版格式，比如：
+
+- **加粗** - ` + "`" + `**加粗**` + "`" + `
+- *倾斜* - ` + "`" + `*倾斜*` + "`" + `
+- ~~删除线~~ - ` + "`" + `~~删除线~~` + "`" + `
+- ` + "`" + `Code 标记` + "`" + ` - ` + "`" + `Code 标记` + "`" + `
+- [超级链接](https://hacpai.com) - ` + "`" + `[超级链接](https://hacpai.com)` + "`" + `
+- [username@gmail.com](mailto:username@gmail.com) - ` + "`" + `[username@gmail.com](mailto:username@gmail.com)` + "`" + `
+
+### 提及用户
+
+@Vanessa 通过 `+"`" + `@User` + "`" + ` 可以在内容中提及用户，被提及的用户将会收到系统通知。
 `
 
 //const sample = `Vditor 是一款**所见即所得**编辑器，支持 *Markdown*。`
