@@ -2,10 +2,8 @@ package main
 
 import (
 	"log"
-	"math"
 
 	"github.com/88250/lute/parse"
-
 	"github.com/signintech/gopdf"
 )
 
@@ -25,42 +23,35 @@ func main() {
 		log.Fatal(err)
 	}
 
-	const factor = 0.8
-	fontSize := 16 * factor
-	x := 16.0 * factor
-	y := 24.0 * factor
+	//pdf.SetFontWithStyle("msyhb", gopdf.Bold, int(math.Round(heading2Size)))
+	//pdf.SetFontWithStyle("msyh", gopdf.Regular, int(fontSize))
+	//pdf.SetFont("msyh", "", int(fontSize))
 
-	const lineHeight = 24.0 * factor
-	const heading2Size = 24 * factor
-
-	if err = pdf.SetFontWithStyle("msyhb", gopdf.Bold, int(math.Round(heading2Size))); nil != err {
-		log.Fatal(err)
-	}
-	pdf.SetX(x)
-	pdf.SetY(y)
-	_ = pdf.Cell(nil, "Guide")
-	y += heading2Size + lineHeight
-	pdf.SetX(x)
-	pdf.SetY(y)
-
-	pdf.SetFontWithStyle("msyh", gopdf.Regular, int(fontSize))
-	pdf.SetFont("msyh", "", int(fontSize))
-
-	markdown := []byte("这是一篇讲解如何正确使用 *Markdown* 的排版示例，学会这个很有必要，能让你的文章有更佳清晰的排版。")
+	markdown := []byte(sample)
 	tree, err := parse.Parse("", markdown, &parse.Options{})
 	if nil != err {
 		log.Fatal(err)
 	}
 	renderer := NewPdfRenderer(tree, pdf)
-	output, err := renderer.Render()
+	_, err = renderer.Render()
 	if nil != err {
 		log.Fatal(err)
 	}
-	text := string(output)
-
-	rect := &gopdf.Rect{W: gopdf.PageSizeA4.W - x*2, H: gopdf.PageSizeA4.H}
-	pdf.MultiCell(rect, text)
 
 	pdf.WritePdf("sample.pdf")
 
 }
+
+const sample = `Vditor 是一款**所见即所得**编辑器，支持 *Markdown*。
+
+* 不熟悉 Markdown 可使用工具栏或快捷键进行排版
+* 熟悉 Markdown 可直接排版，也可切换为分屏预览
+
+更多细节和用法请参考 [Vditor - 浏览器端的 Markdown 编辑器](https://hacpai.com/article/1549638745630)，同时也欢迎向我们提出建议或报告问题，谢谢
+
+## Guide
+
+这是一篇讲解如何正确使用 **Markdown** 的排版示例，学会这个很有必要，能让你的文章有更佳清晰的排版。
+
+> 引用文本：Markdown is a text formatting syntax inspired
+`

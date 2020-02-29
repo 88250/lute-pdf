@@ -1,16 +1,18 @@
 package main
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
+	"unicode"
+	"unicode/utf8"
+
 	"github.com/88250/lute/ast"
 	"github.com/88250/lute/lex"
 	"github.com/88250/lute/parse"
 	"github.com/88250/lute/render"
 	"github.com/88250/lute/util"
 	"github.com/signintech/gopdf"
-	"strconv"
-	"strings"
-	"unicode"
-	"unicode/utf8"
 )
 
 // PdfRenderer 描述了 PDF 渲染器。
@@ -20,11 +22,27 @@ type PdfRenderer struct {
 	headingCnt             int
 
 	pdf *gopdf.GoPdf
+
+	factor       float64
+	fontSize     float64
+	lineHeight   float64
+	heading2Size float64
+	x            float64
+	y            float64
 }
 
 // NewPdfRenderer 创建一个 HTML 渲染器。
 func NewPdfRenderer(tree *parse.Tree, pdf *gopdf.GoPdf) render.Renderer {
-	ret := &PdfRenderer{render.NewBaseRenderer(tree), false, 0, pdf}
+	ret := &PdfRenderer{BaseRenderer: render.NewBaseRenderer(tree), needRenderFootnotesDef: false, headingCnt: 0, pdf: pdf}
+	ret.factor = 0.8
+	ret.fontSize = 16 * ret.factor
+	ret.lineHeight = 24.0 * ret.factor
+	ret.heading2Size = 24 * ret.factor
+	ret.x = 16.0 * ret.factor
+	ret.y = 24.0 * ret.factor
+
+	pdf.SetFontWithStyle("msyh", gopdf.Regular, int(ret.fontSize))
+
 	ret.RendererFuncs[ast.NodeDocument] = ret.renderDocument
 	ret.RendererFuncs[ast.NodeParagraph] = ret.renderParagraph
 	ret.RendererFuncs[ast.NodeText] = ret.renderText
@@ -468,9 +486,7 @@ func (r *PdfRenderer) renderParagraph(node *ast.Node, entering bool) ast.WalkSta
 
 	if entering {
 		r.Newline()
-		r.tag("p", nil, false)
 	} else {
-		r.tag("/p", nil, false)
 		r.Newline()
 	}
 	return ast.WalkContinue
@@ -486,7 +502,17 @@ func (r *PdfRenderer) renderText(node *ast.Node, entering bool) ast.WalkStatus {
 	if r.Option.ChinesePunct {
 		r.ChinesePunct(node)
 	}
-	r.Write(util.EscapeHTML(node.Tokens))
+
+	text := util.BytesToStr(util.EscapeHTML(node.Tokens))
+	lines, _ := r.pdf.SplitText(text, gopdf.PageSizeA4.W)
+	y := r.pdf.GetY()
+	for i, line := range lines {
+		r.WriteString(line)
+		if 0 < i {
+			y += r.lineHeight
+			r.pdf.SetY(y)
+		}
+	}
 	return ast.WalkStop
 }
 
@@ -538,14 +564,12 @@ func (r *PdfRenderer) renderEmphasis(node *ast.Node, entering bool) ast.WalkStat
 }
 
 func (r *PdfRenderer) renderEmAsteriskOpenMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.tag("em", nil, false)
-	r.pdf.SetFontWithStyle("msyhb", gopdf.Bold, 16)
-
+	r.pdf.SetFontWithStyle("msyh", gopdf.Italic, int(r.fontSize))
 	return ast.WalkStop
 }
 
 func (r *PdfRenderer) renderEmAsteriskCloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.tag("/em", nil, false)
+	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, int(r.fontSize))
 	return ast.WalkStop
 }
 
@@ -569,12 +593,12 @@ func (r *PdfRenderer) renderStrong(node *ast.Node, entering bool) ast.WalkStatus
 }
 
 func (r *PdfRenderer) renderStrongA6kOpenMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.tag("strong", nil, false)
+	r.pdf.SetFontWithStyle("msyhb", gopdf.Bold, int(r.fontSize))
 	return ast.WalkStop
 }
 
 func (r *PdfRenderer) renderStrongA6kCloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.tag("/strong", nil, false)
+	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, int(r.fontSize))
 	return ast.WalkStop
 }
 
@@ -635,22 +659,9 @@ func (r *PdfRenderer) renderHeadingC8hMarker(node *ast.Node, entering bool) ast.
 }
 
 func (r *PdfRenderer) renderList(node *ast.Node, entering bool) ast.WalkStatus {
-	tag := "ul"
-	if 1 == node.ListData.Typ || (3 == node.ListData.Typ && 0 == node.ListData.BulletChar) {
-		tag = "ol"
-	}
 	if entering {
 		r.Newline()
-		attrs := [][]string{{"start", strconv.Itoa(node.Start)}}
-		if 0 == node.BulletChar && 1 != node.Start {
-			r.tag(tag, attrs, false)
-		} else {
-			r.tag(tag, nil, false)
-		}
-		r.Newline()
 	} else {
-		r.Newline()
-		r.tag("/"+tag, nil, false)
 		r.Newline()
 	}
 	return ast.WalkContinue
@@ -658,14 +669,18 @@ func (r *PdfRenderer) renderList(node *ast.Node, entering bool) ast.WalkStatus {
 
 func (r *PdfRenderer) renderListItem(node *ast.Node, entering bool) ast.WalkStatus {
 	if entering {
+		marker := fmt.Sprintf("%s", node.ListData.Marker)
 		if 3 == node.ListData.Typ && "" != r.Option.GFMTaskListItemClass &&
 			nil != node.FirstChild && nil != node.FirstChild.FirstChild && ast.NodeTaskListItemMarker == node.FirstChild.FirstChild.Type {
-			r.tag("li", [][]string{{"class", r.Option.GFMTaskListItemClass}}, false)
+			r.WriteString(fmt.Sprintf("%s", node.ListData.Marker))
 		} else {
-			r.tag("li", nil, false)
+			if "*" == marker {
+				r.WriteString("● ")
+			} else {
+				r.WriteString(marker + ". ")
+			}
 		}
 	} else {
-		r.tag("/li", nil, false)
 		r.Newline()
 	}
 	return ast.WalkContinue
@@ -724,4 +739,42 @@ func (r *PdfRenderer) tag(name string, attrs [][]string, selfclosing bool) {
 		r.WriteString(" /")
 	}
 	r.WriteString(">")
+}
+
+// WriteByte 输出一个字节 c。
+func (r *PdfRenderer) WriteByte(c byte) {
+	r.Writer.WriteByte(c)
+	r.LastOut = c
+}
+
+// WriteBytes 输出字节数组 bytes。
+func (r *PdfRenderer) WriteBytes(bytes []byte) {
+	if length := len(bytes); 0 < length {
+		r.pdf.Cell(nil, string(bytes))
+		r.LastOut = bytes[length-1]
+	}
+}
+
+// Write 输出指定的 Tokens 数组 content。
+func (r *PdfRenderer) Write(content []byte) {
+	if length := len(content); 0 < length {
+		r.pdf.Cell(nil, string(content))
+		r.LastOut = content[length-1]
+	}
+}
+
+// WriteString 输出指定的字符串 content。
+func (r *PdfRenderer) WriteString(content string) {
+	if length := len(content); 0 < length {
+		r.pdf.Cell(nil, content)
+		r.LastOut = content[length-1]
+	}
+}
+
+// Newline 会在最新内容不是换行符 \n 时输出一个换行符。
+func (r *PdfRenderer) Newline() {
+	if lex.ItemNewline != r.LastOut {
+		r.pdf.Br(r.lineHeight)
+		r.LastOut = lex.ItemNewline
+	}
 }
