@@ -21,14 +21,14 @@ type PdfRenderer struct {
 	needRenderFootnotesDef bool
 	headingCnt             int
 
-	pdf *gopdf.GoPdf
-
-	factor       float64
-	fontSize     float64
-	lineHeight   float64
-	heading2Size float64
-	x            float64
-	y            float64
+	pdf          *gopdf.GoPdf // PDF 生成器句柄
+	factor       float64      // 字体、行高大小倍数
+	fontSize     float64      // 字体大小
+	lineHeight   float64      // 行高
+	heading2Size float64      // 二级标题字体大小
+	margin       float64      // 页边距
+	x            float64      // 当前横坐标
+	y            float64      // 当前纵坐标
 }
 
 // NewPdfRenderer 创建一个 HTML 渲染器。
@@ -38,10 +38,10 @@ func NewPdfRenderer(tree *parse.Tree, pdf *gopdf.GoPdf) render.Renderer {
 	ret.fontSize = 16 * ret.factor
 	ret.lineHeight = 24.0 * ret.factor
 	ret.heading2Size = 24 * ret.factor
-	ret.x = 16.0 * ret.factor
-	ret.y = 24.0 * ret.factor
+	ret.margin = 30 * ret.factor
 
 	pdf.SetFontWithStyle("msyh", gopdf.Regular, int(ret.fontSize))
+	pdf.SetMargins(ret.margin, ret.margin, ret.margin, ret.margin)
 
 	ret.RendererFuncs[ast.NodeDocument] = ret.renderDocument
 	ret.RendererFuncs[ast.NodeParagraph] = ret.renderParagraph
@@ -445,20 +445,18 @@ func (r *PdfRenderer) renderImage(node *ast.Node, entering bool) ast.WalkStatus 
 
 func (r *PdfRenderer) renderLink(node *ast.Node, entering bool) ast.WalkStatus {
 	if entering {
-		r.LinkTextAutoSpacePrevious(node)
-
+		// TODO: r.LinkTextAutoSpacePrevious(node)
+		r.x = r.pdf.GetX()
+		r.y = r.pdf.GetY()
+		r.pdf.SetTextColor(66, 133, 244)
+	} else {
+		width := r.pdf.GetX() - r.x
 		dest := node.ChildByType(ast.NodeLinkDest)
 		destTokens := dest.Tokens
 		destTokens = r.Tree.Context.RelativePath(destTokens)
-		attrs := [][]string{{"href", util.BytesToStr(util.EscapeHTML(destTokens))}}
-		if title := node.ChildByType(ast.NodeLinkTitle); nil != title && nil != title.Tokens {
-			attrs = append(attrs, []string{"title", util.BytesToStr(util.EscapeHTML(title.Tokens))})
-		}
-		r.tag("a", attrs, false)
-	} else {
-		r.tag("/a", nil, false)
-
-		r.LinkTextAutoSpaceNext(node)
+		r.pdf.AddExternalLink(util.BytesToStr(util.EscapeHTML(destTokens)), r.x, r.y, width, r.lineHeight)
+		// TODO: r.LinkTextAutoSpaceNext(node)
+		r.pdf.SetTextColor(0, 0, 0)
 	}
 	return ast.WalkContinue
 }
@@ -504,13 +502,12 @@ func (r *PdfRenderer) renderText(node *ast.Node, entering bool) ast.WalkStatus {
 	}
 
 	text := util.BytesToStr(util.EscapeHTML(node.Tokens))
-	lines, _ := r.pdf.SplitText(text, gopdf.PageSizeA4.W)
-	y := r.pdf.GetY()
-	for i, line := range lines {
+	lines, _ := r.pdf.SplitText(text, gopdf.PageSizeA4.W-r.margin-r.pdf.GetX())
+	isMultiLine := 1 < len(lines)
+	for _, line := range lines {
 		r.WriteString(line)
-		if 0 < i {
-			y += r.lineHeight
-			r.pdf.SetY(y)
+		if isMultiLine {
+			r.Newline()
 		}
 	}
 	return ast.WalkStop
@@ -661,7 +658,9 @@ func (r *PdfRenderer) renderHeadingC8hMarker(node *ast.Node, entering bool) ast.
 func (r *PdfRenderer) renderList(node *ast.Node, entering bool) ast.WalkStatus {
 	if entering {
 		r.Newline()
+		r.pdf.SetY(r.pdf.GetY() + 4)
 	} else {
+		r.pdf.SetY(r.pdf.GetY() + 4)
 		r.Newline()
 	}
 	return ast.WalkContinue
