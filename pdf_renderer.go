@@ -243,14 +243,9 @@ func (r *PdfRenderer) renderFootnotesDef(node *ast.Node, entering bool) ast.Walk
 }
 
 func (r *PdfRenderer) renderCodeBlock(node *ast.Node, entering bool) ast.WalkStatus {
-	if entering {
-		r.pdf.SetFontWithStyle("msyh", gopdf.Regular, r.fontSize)
-	} else {
-		r.pdf.SetFontWithStyle("msyh", gopdf.Regular, r.fontSize)
-	}
 	if !node.IsFencedCodeBlock {
 		// 缩进代码块处理
-		r.renderCodeBlockContent(util.BytesToStr(node.Tokens))
+		r.renderCodeBlockLike(node.Tokens)
 		return ast.WalkStop
 	}
 	return ast.WalkContinue
@@ -258,18 +253,24 @@ func (r *PdfRenderer) renderCodeBlock(node *ast.Node, entering bool) ast.WalkSta
 
 // renderCodeBlockCode 进行代码块 HTML 渲染，实现语法高亮。
 func (r *PdfRenderer) renderCodeBlockCode(node *ast.Node, entering bool) ast.WalkStatus {
-	r.renderCodeBlockContent(util.BytesToStr(node.Tokens))
+	r.renderCodeBlockLike(node.Tokens)
 	return ast.WalkStop
 }
 
-func (r *PdfRenderer) renderCodeBlockContent(content string) {
+func (r *PdfRenderer) renderCodeBlockLike(content []byte) {
 	r.Newline()
 	r.pdf.SetY(r.pdf.GetY() + 6)
 	r.pdf.SetTextColor(86, 158, 61)
-	r.WriteString(content)
+	r.WriteString(util.BytesToStr(content))
 	r.pdf.SetTextColor(0, 0, 0)
 	r.pdf.SetY(r.pdf.GetY() + 6)
 	r.Newline()
+}
+
+func (r *PdfRenderer) renderCodeSpanLike(content []byte) {
+	r.pdf.SetTextColor(255, 153, 51)
+	r.WriteString(util.BytesToStr(content))
+	r.pdf.SetTextColor(0, 0, 0)
 }
 
 func (r *PdfRenderer) renderCodeBlockCloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
@@ -308,7 +309,7 @@ func (r *PdfRenderer) renderInlineMathCloseMarker(node *ast.Node, entering bool)
 }
 
 func (r *PdfRenderer) renderInlineMathContent(node *ast.Node, entering bool) ast.WalkStatus {
-	r.Write(node.Tokens)
+	r.renderCodeSpanLike(node.Tokens)
 	return ast.WalkStop
 }
 
@@ -325,8 +326,7 @@ func (r *PdfRenderer) renderMathBlockCloseMarker(node *ast.Node, entering bool) 
 }
 
 func (r *PdfRenderer) renderMathBlockContent(node *ast.Node, entering bool) ast.WalkStatus {
-	content := util.BytesToStr(node.Tokens)
-	r.WriteString(content)
+	r.renderCodeBlockLike(node.Tokens)
 	return ast.WalkStop
 }
 
@@ -555,12 +555,7 @@ func (r *PdfRenderer) renderCodeSpanOpenMarker(node *ast.Node, entering bool) as
 }
 
 func (r *PdfRenderer) renderCodeSpanContent(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, r.fontSize)
-	content := util.BytesToStr(node.Tokens)
-	r.pdf.SetTextColor(255, 153, 51)
-	r.WriteString(content)
-	r.pdf.SetTextColor(0, 0, 0)
-	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, r.fontSize)
+	r.renderCodeSpanLike(node.Tokens)
 	return ast.WalkStop
 }
 
