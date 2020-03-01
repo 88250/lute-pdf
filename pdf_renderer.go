@@ -68,7 +68,7 @@ func NewPdfRenderer(tree *parse.Tree) render.Renderer {
 		log.Fatal(err)
 	}
 
-	err = pdf.AddTTFFontWithOption("consola", "fonts/consola.ttf", gopdf.TtfOption{Style:gopdf.Regular})
+	err = pdf.AddTTFFontWithOption("consola", "fonts/consola.ttf", gopdf.TtfOption{Style: gopdf.Regular})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -255,15 +255,7 @@ func (r *PdfRenderer) renderCodeBlock(node *ast.Node, entering bool) ast.WalkSta
 	if !node.IsFencedCodeBlock {
 		// 缩进代码块处理
 		r.Newline()
-		content := util.BytesToStr(node.Tokens)
-		lines, _ := r.pdf.SplitText(content, r.pageSize.W-r.margin*2)
-		isMultiLine := 1 < len(lines)
-		for _, line := range lines {
-			r.WriteString(line)
-			if isMultiLine {
-				r.Newline()
-			}
-		}
+		r.WriteString(util.BytesToStr(node.Tokens))
 		r.Newline()
 		return ast.WalkStop
 	}
@@ -273,15 +265,7 @@ func (r *PdfRenderer) renderCodeBlock(node *ast.Node, entering bool) ast.WalkSta
 // renderCodeBlockCode 进行代码块 HTML 渲染，实现语法高亮。
 func (r *PdfRenderer) renderCodeBlockCode(node *ast.Node, entering bool) ast.WalkStatus {
 	r.Newline()
-	content := util.BytesToStr(node.Tokens)
-	lines, _ := r.pdf.SplitText(content, r.pageSize.W-r.margin*2)
-	isMultiLine := 1 < len(lines)
-	for _, line := range lines {
-		r.WriteString(line)
-		if isMultiLine {
-			r.Newline()
-		}
-	}
+	r.WriteString(util.BytesToStr(node.Tokens))
 	r.Newline()
 	return ast.WalkStop
 }
@@ -340,14 +324,7 @@ func (r *PdfRenderer) renderMathBlockCloseMarker(node *ast.Node, entering bool) 
 
 func (r *PdfRenderer) renderMathBlockContent(node *ast.Node, entering bool) ast.WalkStatus {
 	content := util.BytesToStr(node.Tokens)
-	lines, _ := r.pdf.SplitText(content, r.pageSize.W-r.margin*2)
-	isMultiLine := 1 < len(lines)
-	for _, line := range lines {
-		r.WriteString(line)
-		if isMultiLine {
-			r.Newline()
-		}
-	}
+	r.WriteString(content)
 	return ast.WalkStop
 }
 
@@ -564,18 +541,7 @@ func (r *PdfRenderer) renderParagraph(node *ast.Node, entering bool) ast.WalkSta
 
 func (r *PdfRenderer) renderText(node *ast.Node, entering bool) ast.WalkStatus {
 	text := util.BytesToStr(node.Tokens)
-	width := gopdf.PageSizeA4.W - r.margin - r.pdf.GetX()
-	if 0 > width {
-		width = gopdf.PageSizeA4.W - r.margin
-	}
-	lines, _ := r.pdf.SplitText(text, width)
-	isMultiLine := 1 < len(lines)
-	for _, line := range lines {
-		r.WriteString(line)
-		if isMultiLine {
-			r.Newline()
-		}
-	}
+	r.WriteString(text)
 	return ast.WalkStop
 }
 
@@ -822,10 +788,13 @@ func (r *PdfRenderer) WriteString(content string) {
 			r.pdf.AddPage()
 		}
 
-		if "\n" == content {
-			r.pdf.Br(r.lineHeight)
-		} else {
-			r.pdf.Cell(nil, content)
+		lines, _ := r.pdf.SplitText(content, r.pageSize.W-r.margin*2)
+		isMultiLine := 1 < len(lines)
+		for _, line := range lines {
+			r.pdf.Cell(nil, line)
+			if isMultiLine {
+				r.pdf.Br(r.fontSize + 2)
+			}
 		}
 		r.LastOut = content[length-1]
 	}
