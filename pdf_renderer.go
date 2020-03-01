@@ -729,7 +729,9 @@ func (r *PdfRenderer) renderList(node *ast.Node, entering bool) ast.WalkStatus {
 	if entering {
 		r.Newline()
 		r.pdf.SetY(r.pdf.GetY() + 4)
-
+		nestedLevel := r.countParentContainerBlocks(node)
+		indent := float64(nestedLevel * 16)
+		r.pdf.SetX(r.pdf.GetX() + indent)
 	} else {
 		r.pdf.SetY(r.pdf.GetY() + 4)
 		r.Newline()
@@ -739,12 +741,17 @@ func (r *PdfRenderer) renderList(node *ast.Node, entering bool) ast.WalkStatus {
 
 func (r *PdfRenderer) renderListItem(node *ast.Node, entering bool) ast.WalkStatus {
 	if entering {
-		marker := fmt.Sprintf("%s", node.ListData.Marker)
+		if node.Parent.FirstChild != node {
+			nestedLevel := r.countParentContainerBlocks(node) - 1
+			indent := float64(nestedLevel * 16)
+			r.pdf.SetX(r.pdf.GetX() + indent)
+		}
+
 		if 3 == node.ListData.Typ && "" != r.Option.GFMTaskListItemClass &&
 			nil != node.FirstChild && nil != node.FirstChild.FirstChild && ast.NodeTaskListItemMarker == node.FirstChild.FirstChild.Type {
 			r.WriteString(fmt.Sprintf("%s", node.ListData.Marker))
 		} else {
-			if "*" == marker || "-" == marker || "+" == marker {
+			if 0 != node.BulletChar {
 				r.WriteString("● ")
 			} else {
 				r.WriteString(fmt.Sprint(node.Num) + ". ")
@@ -793,6 +800,15 @@ func (r *PdfRenderer) popX() float64 {
 	ret := r.x[len(r.x)-1]
 	r.x = r.x[:len(r.x)]
 	return ret
+}
+
+func (r *PdfRenderer) countParentContainerBlocks(n *ast.Node) (ret int) {
+	for parent := n.Parent; nil != parent; parent = parent.Parent {
+		if ast.NodeBlockquote == parent.Type || ast.NodeList == parent.Type {
+			ret++
+		}
+	}
+	return
 }
 
 // WriteByte 输出一个字节 c。
