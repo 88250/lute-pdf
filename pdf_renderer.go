@@ -69,11 +69,6 @@ func NewPdfRenderer(tree *parse.Tree) render.Renderer {
 		log.Fatal(err)
 	}
 
-	err = pdf.AddTTFFontWithOption("cour", "fonts/cour.ttf", gopdf.TtfOption{Style: gopdf.Regular})
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	pdf.SetFontWithStyle("msyh", gopdf.Regular, int(ret.fontSize))
 	pdf.SetMargins(ret.margin, ret.margin, ret.margin, ret.margin)
 
@@ -249,7 +244,7 @@ func (r *PdfRenderer) renderFootnotesDef(node *ast.Node, entering bool) ast.Walk
 
 func (r *PdfRenderer) renderCodeBlock(node *ast.Node, entering bool) ast.WalkStatus {
 	if entering {
-		r.pdf.SetFontWithStyle("cour,msyh", gopdf.Regular, int(r.fontSize))
+		r.pdf.SetFontWithStyle("msyh", gopdf.Regular, int(r.fontSize))
 	} else {
 		r.pdf.SetFontWithStyle("msyh", gopdf.Regular, int(r.fontSize))
 	}
@@ -392,11 +387,8 @@ func (r *PdfRenderer) renderTable(node *ast.Node, entering bool) ast.WalkStatus 
 	if entering {
 		r.Newline()
 		r.pdf.SetY(r.pdf.GetY() + 6)
-		r.pdf.SetFontWithStyle("cour,msyh", gopdf.Regular, int(r.fontSize))
+		r.pdf.SetFontWithStyle("msyh", gopdf.Regular, int(r.fontSize))
 	} else {
-		if nil != node.FirstChild.Next {
-			//r.tag("/tbody", nil, false)
-		}
 		r.pdf.SetFontWithStyle("msyh", gopdf.Regular, int(r.fontSize))
 		r.pdf.SetY(r.pdf.GetY() + 6)
 		r.Newline()
