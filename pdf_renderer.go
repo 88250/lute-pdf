@@ -40,7 +40,7 @@ func NewPdfRenderer(tree *parse.Tree) render.Renderer {
 	pdf := &gopdf.GoPdf{}
 
 	ret := &PdfRenderer{BaseRenderer: render.NewBaseRenderer(tree), needRenderFootnotesDef: false, headingCnt: 0, pdf: pdf}
-	ret.factor = 0.8
+	ret.factor = 0.75
 	ret.fontSize = 14 * ret.factor
 	ret.lineHeight = 24.0 * ret.factor
 	ret.heading1Size = 24 * ret.factor
@@ -50,8 +50,6 @@ func NewPdfRenderer(tree *parse.Tree) render.Renderer {
 	ret.heading5Size = 16 * ret.factor
 	ret.heading6Size = 14 * ret.factor
 	ret.margin = 30 * ret.factor
-	pdf.SetX(ret.margin)
-	pdf.SetY(ret.margin)
 
 	ret.pageSize = gopdf.PageSizeA4
 	pdf.Start(gopdf.Config{PageSize: *ret.pageSize})
@@ -784,13 +782,12 @@ func (r *PdfRenderer) Write(content []byte) {
 // WriteString 输出指定的字符串 content。
 func (r *PdfRenderer) WriteString(content string) {
 	if length := len(content); 0 < length {
-		if r.pdf.GetY() > r.pageSize.H-r.margin*2 {
-			r.pdf.AddPage()
-		}
-
 		lines, _ := r.pdf.SplitText(content, r.pageSize.W-r.margin*2)
 		isMultiLine := 1 < len(lines)
 		for _, line := range lines {
+			if r.pdf.GetY() > r.pageSize.H-r.margin*2 {
+				r.pdf.AddPage()
+			}
 			r.pdf.Cell(nil, line)
 			if isMultiLine {
 				r.pdf.Br(r.fontSize + 2)
