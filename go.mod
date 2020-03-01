@@ -10,4 +10,4 @@ require (
 	github.com/signintech/gopdf v0.9.5
 )
 
-//replace github.com/88250/lute => D:\gogogo\src\github.com\88250\lute
+replace github.com/88250/lute => D:\gogogo\src\github.com\88250\lute

@@ -42,14 +42,14 @@ func NewPdfRenderer(tree *parse.Tree) render.Renderer {
 
 	ret := &PdfRenderer{BaseRenderer: render.NewBaseRenderer(tree), needRenderFootnotesDef: false, headingCnt: 0, pdf: pdf}
 	ret.factor = 0.8
-	ret.fontSize = 16 * ret.factor
+	ret.fontSize = 14 * ret.factor
 	ret.lineHeight = 24.0 * ret.factor
-	ret.heading1Size = 26 * ret.factor
-	ret.heading2Size = 24 * ret.factor
-	ret.heading3Size = 22 * ret.factor
-	ret.heading4Size = 20 * ret.factor
-	ret.heading5Size = 18 * ret.factor
-	ret.heading6Size = 16 * ret.factor
+	ret.heading1Size = 24 * ret.factor
+	ret.heading2Size = 22 * ret.factor
+	ret.heading3Size = 20 * ret.factor
+	ret.heading4Size = 18 * ret.factor
+	ret.heading5Size = 16 * ret.factor
+	ret.heading6Size = 14 * ret.factor
 	ret.margin = 30 * ret.factor
 	pdf.SetX(ret.margin)
 	pdf.SetY(ret.margin)
@@ -807,14 +807,9 @@ func (r *PdfRenderer) WriteByte(c byte) {
 	r.WriteString(string(c))
 }
 
-// WriteBytes 输出字节数组 bytes。
-func (r *PdfRenderer) WriteBytes(bytes []byte) {
-	r.WriteString(util.BytesToStr(bytes))
-}
-
-// Write 输出指定的 Tokens 数组 content。
+// Write 输出指定的字节数组 content。
 func (r *PdfRenderer) Write(content []byte) {
-	r.WriteBytes(content)
+	r.WriteString(util.BytesToStr(content))
 }
 
 // WriteString 输出指定的字符串 content。

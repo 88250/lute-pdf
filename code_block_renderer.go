@@ -145,7 +145,7 @@ func highlightChroma(tokens []byte, language string, r *PdfRenderer) (rendered b
 				r.WriteString("highlight-chroma")
 			}
 			r.WriteString("\">")
-			r.WriteBytes(b.Bytes())
+			r.Write(b.Bytes())
 			rendered = true
 		}
 	}
