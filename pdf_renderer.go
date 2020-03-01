@@ -45,8 +45,12 @@ func NewPdfRenderer(tree *parse.Tree) render.Renderer {
 	ret.factor = 0.8
 	ret.fontSize = 16 * ret.factor
 	ret.lineHeight = 24.0 * ret.factor
+	ret.heading1Size = 26 * ret.factor
 	ret.heading2Size = 24 * ret.factor
-	ret.heading3Size = 20 * ret.factor
+	ret.heading3Size = 22 * ret.factor
+	ret.heading4Size = 20 * ret.factor
+	ret.heading5Size = 18 * ret.factor
+	ret.heading6Size = 16 * ret.factor
 	ret.margin = 30 * ret.factor
 	pdf.SetX(ret.margin)
 	pdf.SetY(ret.margin)
@@ -252,12 +256,12 @@ func (r *PdfRenderer) renderEmojiAlias(node *ast.Node, entering bool) ast.WalkSt
 }
 
 func (r *PdfRenderer) renderEmojiImg(node *ast.Node, entering bool) ast.WalkStatus {
-	r.Write(node.Tokens)
+	// TODO: r.Write(node.Tokens)
 	return ast.WalkStop
 }
 
 func (r *PdfRenderer) renderEmojiUnicode(node *ast.Node, entering bool) ast.WalkStatus {
-	r.Write(node.Tokens)
+	// TODO: r.Write(node.Tokens)
 	return ast.WalkStop
 }
 
