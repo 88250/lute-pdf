@@ -308,7 +308,6 @@ func (r *PdfRenderer) renderEmoji(node *ast.Node, entering bool) ast.WalkStatus 
 }
 
 func (r *PdfRenderer) renderInlineMathCloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	//r.tag("/span", nil, false)
 	return ast.WalkStop
 }
 
@@ -318,8 +317,6 @@ func (r *PdfRenderer) renderInlineMathContent(node *ast.Node, entering bool) ast
 }
 
 func (r *PdfRenderer) renderInlineMathOpenMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	//attrs := [][]string{{"class", "vditor-math"}}
-	//r.tag("span", attrs, false)
 	return ast.WalkStop
 }
 
@@ -328,7 +325,6 @@ func (r *PdfRenderer) renderInlineMath(node *ast.Node, entering bool) ast.WalkSt
 }
 
 func (r *PdfRenderer) renderMathBlockCloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	//r.tag("/div", nil, false)
 	return ast.WalkStop
 }
 
@@ -346,8 +342,6 @@ func (r *PdfRenderer) renderMathBlockContent(node *ast.Node, entering bool) ast.
 }
 
 func (r *PdfRenderer) renderMathBlockOpenMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	//attrs := [][]string{{"class", "vditor-math"}}
-	//r.tag("div", attrs, false)
 	return ast.WalkStop
 }
 
@@ -820,7 +814,7 @@ func (r *PdfRenderer) renderTaskListItemMarker(node *ast.Node, entering bool) as
 
 func (r *PdfRenderer) renderThematicBreak(node *ast.Node, entering bool) ast.WalkStatus {
 	r.Newline()
-	//r.tag("hr", nil, true)
+	// TODO: r.tag("hr", nil, true)
 	r.Newline()
 	return ast.WalkStop
 }
