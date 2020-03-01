@@ -262,7 +262,8 @@ func (r *PdfRenderer) renderEmojiUnicode(node *ast.Node, entering bool) ast.Walk
 }
 
 func (r *PdfRenderer) renderEmoji(node *ast.Node, entering bool) ast.WalkStatus {
-	return ast.WalkContinue
+	// TODO: Render Emoji
+	return ast.WalkStop
 }
 
 func (r *PdfRenderer) renderInlineMathCloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
@@ -522,15 +523,15 @@ func (r *PdfRenderer) renderParagraph(node *ast.Node, entering bool) ast.WalkSta
 }
 
 func (r *PdfRenderer) renderText(node *ast.Node, entering bool) ast.WalkStatus {
-	//if r.Option.AutoSpace {
-	//	r.Space(node)
-	//}
-	//if r.Option.FixTermTypo {
-	//	r.FixTermTypo(node)
-	//}
-	//if r.Option.ChinesePunct {
-	//	r.ChinesePunct(node)
-	//}
+	if r.Option.AutoSpace {
+		r.Space(node)
+	}
+	if r.Option.FixTermTypo {
+		r.FixTermTypo(node)
+	}
+	if r.Option.ChinesePunct {
+		r.ChinesePunct(node)
+	}
 
 	text := util.BytesToStr(util.EscapeHTML(node.Tokens))
 	width := gopdf.PageSizeA4.W - r.margin - r.pdf.GetX()
@@ -652,7 +653,6 @@ func (r *PdfRenderer) renderBlockquote(node *ast.Node, entering bool) ast.WalkSt
 		r.Newline()
 		r.pdf.SetTextColor(106, 115, 125)
 		r.x = r.pdf.GetX()
-		r.pdf.SetX(r.x + r.fontSize)
 	} else {
 		r.pdf.SetX(r.pdf.GetX() - r.x + r.margin)
 		r.pdf.SetTextColor(0, 0, 0)
