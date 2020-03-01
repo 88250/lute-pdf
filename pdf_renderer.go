@@ -341,47 +341,54 @@ func (r *PdfRenderer) renderMathBlock(node *ast.Node, entering bool) ast.WalkSta
 
 func (r *PdfRenderer) renderTableCell(node *ast.Node, entering bool) ast.WalkStatus {
 	if entering {
-		var attrs [][]string
-		switch node.TableCellAlign {
-		case 1:
-			attrs = append(attrs, []string{"align", "left"})
-		case 2:
-			attrs = append(attrs, []string{"align", "center"})
-		case 3:
-			attrs = append(attrs, []string{"align", "right"})
-		}
+		// TODO: table align
+		//var attrs [][]string
+		//switch node.TableCellAlign {
+		//case 1:
+		//	attrs = append(attrs, []string{"align", "left"})
+		//case 2:
+		//	attrs = append(attrs, []string{"align", "center"})
+		//case 3:
+		//	attrs = append(attrs, []string{"align", "right"})
+		//}
+		x := r.pdf.GetX()
+		cols := float64(r.tableCols(node))
+		maxWidth := (r.pageSize.W - r.margin*2) / cols
 		if node.Parent.FirstChild != node {
-			x := r.pdf.GetX()
-			prevMaxWidth, _ := r.pdf.MeasureTextWidth(util.BytesToStr(node.Previous.TableCellMaxWidthContent))
 			prevWidth, _ := r.pdf.MeasureTextWidth(util.BytesToStr(node.Previous.TableCellContent))
-			x += prevMaxWidth - prevWidth
+			x += maxWidth - prevWidth
 			r.pdf.SetX(x)
 		}
+		r.pdf.RectFromUpperLeftWithStyle(x, r.pdf.GetY(), maxWidth, r.lineHeight, "D")
+		r.pdf.SetX(r.pdf.GetX() + 4)
+		r.pdf.SetY(r.pdf.GetY() + 4)
+	} else {
+		r.pdf.SetX(r.pdf.GetX() - 4)
+		r.pdf.SetY(r.pdf.GetY() - 4)
 	}
 	return ast.WalkContinue
 }
 
-func (r *PdfRenderer) renderTableRow(node *ast.Node, entering bool) ast.WalkStatus {
-	if entering {
-		r.Newline()
-	} else {
-		r.Newline()
+func (r *PdfRenderer) tableCols(cell *ast.Node) int {
+	for parent := cell.Parent; nil != parent; parent = parent.Parent {
+		if nil != parent.TableAligns {
+			return len(parent.TableAligns)
+		}
 	}
+	return 0
+}
+
+func (r *PdfRenderer) renderTableRow(node *ast.Node, entering bool) ast.WalkStatus {
+	r.Newline()
 	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderTableHead(node *ast.Node, entering bool) ast.WalkStatus {
-	if entering {
-		r.pdf.SetFontWithStyle("msyhb", gopdf.Bold, r.fontSize)
-	} else {
-		r.pdf.SetFontWithStyle("msyh", gopdf.Regular, r.fontSize)
-	}
 	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderTable(node *ast.Node, entering bool) ast.WalkStatus {
 	if entering {
-		r.Newline()
 		r.pdf.SetY(r.pdf.GetY() + 6)
 	} else {
 		r.pdf.SetY(r.pdf.GetY() + 6)
@@ -730,7 +737,11 @@ func (r *PdfRenderer) renderTaskListItemMarker(node *ast.Node, entering bool) as
 
 func (r *PdfRenderer) renderThematicBreak(node *ast.Node, entering bool) ast.WalkStatus {
 	r.Newline()
-	// TODO: r.tag("hr", nil, true)
+	r.pdf.SetY(r.pdf.GetY() + 14)
+	r.pdf.SetStrokeColor(106, 115, 125)
+	r.pdf.Line(r.pdf.GetX()+float64(r.fontSize), r.pdf.GetY(), r.pageSize.W-r.margin-float64(r.fontSize), r.pdf.GetY())
+	r.pdf.SetY(r.pdf.GetY() + 12)
+	r.pdf.SetStrokeColor(0, 0, 0)
 	r.Newline()
 	return ast.WalkStop
 }
