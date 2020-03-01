@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"io/ioutil"
 	"log"
 
@@ -22,6 +23,9 @@ func main() {
 	if nil != err {
 		log.Fatal(err)
 	}
+
+	markdown = bytes.ReplaceAll(markdown, []byte("\t"), []byte("    "))
+
 	tree, err := parse.Parse("sample", markdown, options)
 	if nil != err {
 		log.Fatal(err)

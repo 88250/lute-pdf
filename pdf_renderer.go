@@ -333,7 +333,15 @@ func (r *PdfRenderer) renderMathBlockCloseMarker(node *ast.Node, entering bool) 
 }
 
 func (r *PdfRenderer) renderMathBlockContent(node *ast.Node, entering bool) ast.WalkStatus {
-	r.Write(node.Tokens)
+	content := util.BytesToStr(node.Tokens)
+	lines, _ := r.pdf.SplitText(content, r.pageSize.W-r.margin*2)
+	isMultiLine := 1 < len(lines)
+	for _, line := range lines {
+		r.WriteString(line)
+		if isMultiLine {
+			r.Newline()
+		}
+	}
 	return ast.WalkStop
 }
 
