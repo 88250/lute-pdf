@@ -70,7 +70,7 @@ var a = 1
 
 ##### 演示 Go 代码高亮
 
-```go
+```
 package main
 
 import "fmt"
@@ -82,7 +82,7 @@ func main() {
 
 ##### 演示 Java 高亮
 
-```java
+```
 public class HelloWorld {
 
     public static void main(String[] args) {

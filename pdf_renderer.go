@@ -241,6 +241,25 @@ func (r *PdfRenderer) renderFootnotesDef(node *ast.Node, entering bool) ast.Walk
 	return ast.WalkContinue
 }
 
+func (r *PdfRenderer) renderCodeBlock(node *ast.Node, entering bool) ast.WalkStatus {
+	if !node.IsFencedCodeBlock {
+		// 缩进代码块处理
+		r.Newline()
+		tokens := util.EscapeHTML(node.FirstChild.Tokens)
+		r.Write(tokens)
+		r.Newline()
+		return ast.WalkStop
+	}
+	r.Newline()
+	return ast.WalkContinue
+}
+
+// renderCodeBlockCode 进行代码块 HTML 渲染，实现语法高亮。
+func (r *PdfRenderer) renderCodeBlockCode(node *ast.Node, entering bool) ast.WalkStatus {
+	r.Write(util.EscapeHTML(node.Tokens))
+	return ast.WalkContinue
+}
+
 func (r *PdfRenderer) renderCodeBlockCloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
 	return ast.WalkStop
 }
