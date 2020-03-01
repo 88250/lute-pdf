@@ -68,6 +68,11 @@ func NewPdfRenderer(tree *parse.Tree) render.Renderer {
 		log.Fatal(err)
 	}
 
+	err = pdf.AddTTFFontWithOption("consola", "fonts/consola.ttf", gopdf.TtfOption{Style:gopdf.Regular})
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	pdf.SetFontWithStyle("msyh", gopdf.Regular, int(ret.fontSize))
 	pdf.SetMargins(ret.margin, ret.margin, ret.margin, ret.margin)
 
@@ -242,6 +247,11 @@ func (r *PdfRenderer) renderFootnotesDef(node *ast.Node, entering bool) ast.Walk
 }
 
 func (r *PdfRenderer) renderCodeBlock(node *ast.Node, entering bool) ast.WalkStatus {
+	if entering {
+		r.pdf.SetFontWithStyle("consola,msyh", gopdf.Regular, int(r.fontSize))
+	} else {
+		r.pdf.SetFontWithStyle("msyh", gopdf.Regular, int(r.fontSize))
+	}
 	if !node.IsFencedCodeBlock {
 		// 缩进代码块处理
 		r.Newline()
@@ -366,9 +376,15 @@ func (r *PdfRenderer) renderTableCell(node *ast.Node, entering bool) ast.WalkSta
 			attrs = append(attrs, []string{"align", "right"})
 		}
 		//r.tag(tag, attrs, false)
+		if node.Parent.FirstChild != node {
+			x := r.pdf.GetX()
+			width, _ := r.pdf.MeasureTextWidth(strings.Repeat("中", node.TableCellContentMaxWidth))
+			prevWidth, _ := r.pdf.MeasureTextWidth(strings.Repeat("文", node.Previous.TableCellContentWidth))
+			x += width - prevWidth
+			r.pdf.SetX(x)
+		}
 	} else {
 		//r.tag("/"+tag, nil, false)
-		r.Newline()
 	}
 	return ast.WalkContinue
 }
@@ -385,41 +401,24 @@ func (r *PdfRenderer) renderTableRow(node *ast.Node, entering bool) ast.WalkStat
 }
 
 func (r *PdfRenderer) renderTableHead(node *ast.Node, entering bool) ast.WalkStatus {
-	if entering {
-		//r.tag("thead", nil, false)
-		r.Newline()
-	} else {
-		//r.tag("/thead", nil, false)
-		r.Newline()
-		if nil != node.Next {
-			//r.tag("tbody", nil, false)
-		}
-		r.Newline()
-	}
 	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderTable(node *ast.Node, entering bool) ast.WalkStatus {
 	if entering {
-		//r.tag("table", nil, false)
 		r.Newline()
+		r.pdf.SetFontWithStyle("consola,msyh", gopdf.Regular, int(r.fontSize))
 	} else {
 		if nil != node.FirstChild.Next {
 			//r.tag("/tbody", nil, false)
 		}
-		r.Newline()
-		//r.tag("/table", nil, false)
+		r.pdf.SetFontWithStyle("msyh", gopdf.Regular, int(r.fontSize))
 		r.Newline()
 	}
 	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderStrikethrough(node *ast.Node, entering bool) ast.WalkStatus {
-	if entering {
-		// TODO: r.TextAutoSpacePrevious(node)
-	} else {
-		// TODO: r.TextAutoSpaceNext(node)
-	}
 	return ast.WalkContinue
 }
 
@@ -458,9 +457,6 @@ func (r *PdfRenderer) renderLinkSpace(node *ast.Node, entering bool) ast.WalkSta
 }
 
 func (r *PdfRenderer) renderLinkText(node *ast.Node, entering bool) ast.WalkStatus {
-	if r.Option.AutoSpace {
-		r.Space(node)
-	}
 	r.Write(node.Tokens)
 	return ast.WalkStop
 }
@@ -513,7 +509,6 @@ func (r *PdfRenderer) renderImage(node *ast.Node, entering bool) ast.WalkStatus 
 
 func (r *PdfRenderer) renderLink(node *ast.Node, entering bool) ast.WalkStatus {
 	if entering {
-		// TODO: r.LinkTextAutoSpacePrevious(node)
 		r.pushX(r.pdf.GetX())
 		r.pdf.SetTextColor(66, 133, 244)
 	} else {
@@ -523,7 +518,6 @@ func (r *PdfRenderer) renderLink(node *ast.Node, entering bool) ast.WalkStatus {
 		destTokens := dest.Tokens
 		destTokens = r.Tree.Context.RelativePath(destTokens)
 		r.pdf.AddExternalLink(util.BytesToStr(destTokens), x, r.pdf.GetY(), width, r.lineHeight)
-		// TODO: r.LinkTextAutoSpaceNext(node)
 		r.pdf.SetTextColor(0, 0, 0)
 	}
 	return ast.WalkContinue
@@ -569,16 +563,6 @@ func (r *PdfRenderer) renderParagraph(node *ast.Node, entering bool) ast.WalkSta
 }
 
 func (r *PdfRenderer) renderText(node *ast.Node, entering bool) ast.WalkStatus {
-	if r.Option.AutoSpace {
-		r.Space(node)
-	}
-	if r.Option.FixTermTypo {
-		r.FixTermTypo(node)
-	}
-	if r.Option.ChinesePunct {
-		r.ChinesePunct(node)
-	}
-
 	text := util.BytesToStr(node.Tokens)
 	width := gopdf.PageSizeA4.W - r.margin - r.pdf.GetX()
 	if 0 > width {
@@ -596,25 +580,6 @@ func (r *PdfRenderer) renderText(node *ast.Node, entering bool) ast.WalkStatus {
 }
 
 func (r *PdfRenderer) renderCodeSpan(node *ast.Node, entering bool) ast.WalkStatus {
-	if entering {
-		//if r.Option.AutoSpace {
-		//	if text := node.PreviousNodeText(); "" != text {
-		//		lastc, _ := utf8.DecodeLastRuneInString(text)
-		//		if unicode.IsLetter(lastc) || unicode.IsDigit(lastc) {
-		//			r.WriteByte(lex.ItemSpace)
-		//		}
-		//	}
-		//}
-	} else {
-		//if r.Option.AutoSpace {
-		//	if text := node.NextNodeText(); "" != text {
-		//		firstc, _ := utf8.DecodeRuneInString(text)
-		//		if unicode.IsLetter(firstc) || unicode.IsDigit(firstc) {
-		//			r.WriteByte(lex.ItemSpace)
-		//		}
-		//	}
-		//}
-	}
 	return ast.WalkContinue
 }
 
@@ -623,12 +588,14 @@ func (r *PdfRenderer) renderCodeSpanOpenMarker(node *ast.Node, entering bool) as
 }
 
 func (r *PdfRenderer) renderCodeSpanContent(node *ast.Node, entering bool) ast.WalkStatus {
+	r.pdf.SetFontWithStyle("consola,msyh", gopdf.Regular, int(r.fontSize))
 	content := util.BytesToStr(node.Tokens)
 	width, _ := r.pdf.MeasureTextWidth(content)
 	r.pdf.SetFillColor(227, 236, 245)
 	r.pdf.RectFromUpperLeftWithStyle(r.pdf.GetX(), r.pdf.GetY(), width, r.fontSize, "F")
 	r.pdf.SetFillColor(0, 0, 0)
 	r.WriteString(content)
+	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, int(r.fontSize))
 	return ast.WalkStop
 }
 
@@ -637,11 +604,6 @@ func (r *PdfRenderer) renderCodeSpanCloseMarker(node *ast.Node, entering bool) a
 }
 
 func (r *PdfRenderer) renderEmphasis(node *ast.Node, entering bool) ast.WalkStatus {
-	if entering {
-		// TODO: r.TextAutoSpacePrevious(node)
-	} else {
-		// TODO: r.TextAutoSpaceNext(node)
-	}
 	return ast.WalkContinue
 }
 
@@ -666,11 +628,6 @@ func (r *PdfRenderer) renderEmUnderscoreCloseMarker(node *ast.Node, entering boo
 }
 
 func (r *PdfRenderer) renderStrong(node *ast.Node, entering bool) ast.WalkStatus {
-	if entering {
-		// TODO: r.TextAutoSpacePrevious(node)
-	} else {
-		// TODO: r.TextAutoSpaceNext(node)
-	}
 	return ast.WalkContinue
 }
 
@@ -864,7 +821,12 @@ func (r *PdfRenderer) WriteString(content string) {
 		if r.pdf.GetY() > r.pageSize.H-r.margin*2 {
 			r.pdf.AddPage()
 		}
-		r.pdf.Cell(nil, content)
+
+		if "\n" == content {
+			r.pdf.Br(r.lineHeight)
+		} else {
+			r.pdf.Cell(nil, content)
+		}
 		r.LastOut = content[length-1]
 	}
 }

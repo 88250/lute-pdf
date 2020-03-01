@@ -131,10 +131,10 @@ public class HelloWorld {
 
 如果需要展示数据什么的，可以选择使用表格。
 
-| header 1 | header 2 |
+| 表头 1 | 表头 2 |
 | -------- | -------- |
-| cell 1   | cell 2   |
-| cell 3   | cell 4   |
+| 单元格 1   | 单元格 2   |
+| 单元格 3   | 单元格 4   |
 | cell 5   | cell 6   |
 
 ### 段落
