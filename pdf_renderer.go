@@ -21,6 +21,7 @@ type PdfRenderer struct {
 	headingCnt             int
 
 	pdf          *gopdf.GoPdf // PDF 生成器句柄
+	pageSize     *gopdf.Rect  // 页面大小
 	factor       float64      // 字体、行高大小倍数
 	fontSize     float64      // 字体大小
 	lineHeight   float64      // 行高
@@ -38,8 +39,6 @@ type PdfRenderer struct {
 // NewPdfRenderer 创建一个 HTML 渲染器。
 func NewPdfRenderer(tree *parse.Tree) render.Renderer {
 	pdf := &gopdf.GoPdf{}
-	pdf.Start(gopdf.Config{PageSize: *gopdf.PageSizeA4}) // 595.28, 841.89 = A4
-	pdf.AddPage()
 
 	ret := &PdfRenderer{BaseRenderer: render.NewBaseRenderer(tree), needRenderFootnotesDef: false, headingCnt: 0, pdf: pdf}
 	ret.factor = 0.8
@@ -54,6 +53,10 @@ func NewPdfRenderer(tree *parse.Tree) render.Renderer {
 	ret.margin = 30 * ret.factor
 	pdf.SetX(ret.margin)
 	pdf.SetY(ret.margin)
+
+	ret.pageSize = gopdf.PageSizeA4
+	pdf.Start(gopdf.Config{PageSize: *ret.pageSize})
+	pdf.AddPage()
 
 	var err error
 	err = pdf.AddTTFFont("msyh", "fonts/msyh.ttf")
@@ -507,6 +510,9 @@ func (r *PdfRenderer) renderDocument(node *ast.Node, entering bool) ast.WalkStat
 		if err := r.pdf.WritePdf(r.Tree.Name + ".pdf"); nil != err {
 			log.Fatal(err)
 		}
+		if err := r.pdf.Close(); nil != err {
+			log.Fatal(err)
+		}
 	}
 	return ast.WalkContinue
 }
@@ -798,29 +804,25 @@ func (r *PdfRenderer) tag(name string, attrs [][]string, selfclosing bool) {
 
 // WriteByte 输出一个字节 c。
 func (r *PdfRenderer) WriteByte(c byte) {
-	r.pdf.Cell(nil, string(c))
-	r.LastOut = c
+	r.WriteString(string(c))
 }
 
 // WriteBytes 输出字节数组 bytes。
 func (r *PdfRenderer) WriteBytes(bytes []byte) {
-	if length := len(bytes); 0 < length {
-		r.pdf.Cell(nil, string(bytes))
-		r.LastOut = bytes[length-1]
-	}
+	r.WriteString(util.BytesToStr(bytes))
 }
 
 // Write 输出指定的 Tokens 数组 content。
 func (r *PdfRenderer) Write(content []byte) {
-	if length := len(content); 0 < length {
-		r.pdf.Cell(nil, string(content))
-		r.LastOut = content[length-1]
-	}
+	r.WriteBytes(content)
 }
 
 // WriteString 输出指定的字符串 content。
 func (r *PdfRenderer) WriteString(content string) {
 	if length := len(content); 0 < length {
+		if r.pdf.GetY() > r.pageSize.H-r.margin {
+			r.pdf.AddPage()
+		}
 		r.pdf.Cell(nil, content)
 		r.LastOut = content[length-1]
 	}
