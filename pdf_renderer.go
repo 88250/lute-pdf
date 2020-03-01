@@ -824,7 +824,7 @@ func (r *PdfRenderer) Write(content []byte) {
 // WriteString 输出指定的字符串 content。
 func (r *PdfRenderer) WriteString(content string) {
 	if length := len(content); 0 < length {
-		if r.pdf.GetY() > r.pageSize.H-r.margin {
+		if r.pdf.GetY() > r.pageSize.H-r.margin*2 {
 			r.pdf.AddPage()
 		}
 		r.pdf.Cell(nil, content)
