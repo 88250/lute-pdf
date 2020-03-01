@@ -139,6 +139,12 @@ public class HelloWorld {
 | 单元格 3   | 单元格 4   |
 | cell 5   | cell 6   |
 
+| heading 1 | heading 2 |
+| -------- | -------- |
+| cell 1   | cell 2   |
+| cell 3   | cell 4   |
+| cell 5   | cell 6   |
+
 ### 段落
 
 空行可以将内容进行分段，便于阅读。（这是第一段）

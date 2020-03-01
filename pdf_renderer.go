@@ -244,9 +244,9 @@ func (r *PdfRenderer) renderFootnotesDef(node *ast.Node, entering bool) ast.Walk
 
 func (r *PdfRenderer) renderCodeBlock(node *ast.Node, entering bool) ast.WalkStatus {
 	if entering {
-		r.pdf.SetFontWithStyle("msyh", gopdf.Regular, int(r.fontSize))
+		r.pdf.SetFontWithStyle("msyh", gopdf.Regular, r.fontSize)
 	} else {
-		r.pdf.SetFontWithStyle("msyh", gopdf.Regular, int(r.fontSize))
+		r.pdf.SetFontWithStyle("msyh", gopdf.Regular, r.fontSize)
 	}
 	if !node.IsFencedCodeBlock {
 		// 缩进代码块处理
@@ -340,10 +340,6 @@ func (r *PdfRenderer) renderMathBlock(node *ast.Node, entering bool) ast.WalkSta
 }
 
 func (r *PdfRenderer) renderTableCell(node *ast.Node, entering bool) ast.WalkStatus {
-	//tag := "td"
-	if ast.NodeTableHead == node.Parent.Parent.Type {
-		//tag = "th"
-	}
 	if entering {
 		var attrs [][]string
 		switch node.TableCellAlign {
@@ -354,32 +350,32 @@ func (r *PdfRenderer) renderTableCell(node *ast.Node, entering bool) ast.WalkSta
 		case 3:
 			attrs = append(attrs, []string{"align", "right"})
 		}
-		//r.tag(tag, attrs, false)
 		if node.Parent.FirstChild != node {
 			x := r.pdf.GetX()
-			width, _ := r.pdf.MeasureTextWidth(strings.Repeat("中", node.TableCellContentMaxWidth))
-			prevWidth, _ := r.pdf.MeasureTextWidth(strings.Repeat("文", node.Previous.TableCellContentWidth))
-			x += width - prevWidth
+			prevMaxWidth, _ := r.pdf.MeasureTextWidth(util.BytesToStr(node.Previous.TableCellMaxWidthContent))
+			prevWidth, _ := r.pdf.MeasureTextWidth(util.BytesToStr(node.Previous.TableCellContent))
+			x += prevMaxWidth - prevWidth
 			r.pdf.SetX(x)
 		}
-	} else {
-		//r.tag("/"+tag, nil, false)
 	}
 	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderTableRow(node *ast.Node, entering bool) ast.WalkStatus {
 	if entering {
-		//r.tag("tr", nil, false)
 		r.Newline()
 	} else {
-		//r.tag("/tr", nil, false)
 		r.Newline()
 	}
 	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderTableHead(node *ast.Node, entering bool) ast.WalkStatus {
+	if entering {
+		r.pdf.SetFontWithStyle("msyhb", gopdf.Bold, r.fontSize)
+	} else {
+		r.pdf.SetFontWithStyle("msyh", gopdf.Regular, r.fontSize)
+	}
 	return ast.WalkContinue
 }
 
@@ -387,9 +383,7 @@ func (r *PdfRenderer) renderTable(node *ast.Node, entering bool) ast.WalkStatus 
 	if entering {
 		r.Newline()
 		r.pdf.SetY(r.pdf.GetY() + 6)
-		r.pdf.SetFontWithStyle("msyh", gopdf.Regular, int(r.fontSize))
 	} else {
-		r.pdf.SetFontWithStyle("msyh", gopdf.Regular, int(r.fontSize))
 		r.pdf.SetY(r.pdf.GetY() + 6)
 		r.Newline()
 	}
@@ -561,12 +555,12 @@ func (r *PdfRenderer) renderCodeSpanOpenMarker(node *ast.Node, entering bool) as
 }
 
 func (r *PdfRenderer) renderCodeSpanContent(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, int(r.fontSize))
+	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, r.fontSize)
 	content := util.BytesToStr(node.Tokens)
 	r.pdf.SetTextColor(255, 153, 51)
 	r.WriteString(content)
 	r.pdf.SetTextColor(0, 0, 0)
-	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, int(r.fontSize))
+	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, r.fontSize)
 	return ast.WalkStop
 }
 
@@ -579,22 +573,22 @@ func (r *PdfRenderer) renderEmphasis(node *ast.Node, entering bool) ast.WalkStat
 }
 
 func (r *PdfRenderer) renderEmAsteriskOpenMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pdf.SetFontWithStyle("msyh", gopdf.Italic, int(r.fontSize))
+	r.pdf.SetFontWithStyle("msyh", gopdf.Italic, r.fontSize)
 	return ast.WalkStop
 }
 
 func (r *PdfRenderer) renderEmAsteriskCloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, int(r.fontSize))
+	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, r.fontSize)
 	return ast.WalkStop
 }
 
 func (r *PdfRenderer) renderEmUnderscoreOpenMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pdf.SetFontWithStyle("msyh", gopdf.Italic, int(r.fontSize))
+	r.pdf.SetFontWithStyle("msyh", gopdf.Italic, r.fontSize)
 	return ast.WalkStop
 }
 
 func (r *PdfRenderer) renderEmUnderscoreCloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, int(r.fontSize))
+	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, r.fontSize)
 	return ast.WalkStop
 }
 
@@ -603,22 +597,22 @@ func (r *PdfRenderer) renderStrong(node *ast.Node, entering bool) ast.WalkStatus
 }
 
 func (r *PdfRenderer) renderStrongA6kOpenMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pdf.SetFontWithStyle("msyhb", gopdf.Bold, int(r.fontSize))
+	r.pdf.SetFontWithStyle("msyhb", gopdf.Bold, r.fontSize)
 	return ast.WalkStop
 }
 
 func (r *PdfRenderer) renderStrongA6kCloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, int(r.fontSize))
+	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, r.fontSize)
 	return ast.WalkStop
 }
 
 func (r *PdfRenderer) renderStrongU8eOpenMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pdf.SetFontWithStyle("msyhb", gopdf.Bold, int(r.fontSize))
+	r.pdf.SetFontWithStyle("msyhb", gopdf.Bold, r.fontSize)
 	return ast.WalkStop
 }
 
 func (r *PdfRenderer) renderStrongU8eCloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, int(r.fontSize))
+	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, r.fontSize)
 	return ast.WalkStop
 }
 
@@ -679,7 +673,7 @@ func (r *PdfRenderer) renderHeading(node *ast.Node, entering bool) ast.WalkStatu
 		//	r.tag("/a", nil, false)
 		//}
 	} else {
-		r.pdf.SetFontWithStyle("msyh", gopdf.Regular, int(r.fontSize))
+		r.pdf.SetFontWithStyle("msyh", gopdf.Regular, r.fontSize)
 		r.Newline()
 	}
 	return ast.WalkContinue
