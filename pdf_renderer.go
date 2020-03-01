@@ -2,16 +2,19 @@ package main
 
 import (
 	"fmt"
+	"image"
+	"log"
+	"math"
+	"os"
+	"strconv"
+	"strings"
+
 	"github.com/88250/lute/ast"
 	"github.com/88250/lute/lex"
 	"github.com/88250/lute/parse"
 	"github.com/88250/lute/render"
 	"github.com/88250/lute/util"
 	"github.com/signintech/gopdf"
-	"log"
-	"math"
-	"strconv"
-	"strings"
 )
 
 // PdfRenderer 描述了 PDF 渲染器。
@@ -23,7 +26,7 @@ type PdfRenderer struct {
 	pdf          *gopdf.GoPdf // PDF 生成器句柄
 	pageSize     *gopdf.Rect  // 页面大小
 	factor       float64      // 字体、行高大小倍数
-	fontSize     float64      // 字体大小
+	fontSize     int          // 字体大小
 	lineHeight   float64      // 行高
 	heading1Size float64      // 一级标题大小
 	heading2Size float64      // 二级标题大小
@@ -41,7 +44,7 @@ func NewPdfRenderer(tree *parse.Tree) render.Renderer {
 
 	ret := &PdfRenderer{BaseRenderer: render.NewBaseRenderer(tree), needRenderFootnotesDef: false, headingCnt: 0, pdf: pdf}
 	ret.factor = 0.75
-	ret.fontSize = 14 * ret.factor
+	ret.fontSize = int(math.Floor(14 * ret.factor))
 	ret.lineHeight = 24.0 * ret.factor
 	ret.heading1Size = 24 * ret.factor
 	ret.heading2Size = 22 * ret.factor
@@ -66,7 +69,7 @@ func NewPdfRenderer(tree *parse.Tree) render.Renderer {
 		log.Fatal(err)
 	}
 
-	err = pdf.AddTTFFontWithOption("consola", "fonts/consola.ttf", gopdf.TtfOption{Style: gopdf.Regular})
+	err = pdf.AddTTFFontWithOption("cour", "fonts/cour.ttf", gopdf.TtfOption{Style: gopdf.Regular})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -246,15 +249,13 @@ func (r *PdfRenderer) renderFootnotesDef(node *ast.Node, entering bool) ast.Walk
 
 func (r *PdfRenderer) renderCodeBlock(node *ast.Node, entering bool) ast.WalkStatus {
 	if entering {
-		r.pdf.SetFontWithStyle("consola,msyh", gopdf.Regular, int(r.fontSize))
+		r.pdf.SetFontWithStyle("cour,msyh", gopdf.Regular, int(r.fontSize))
 	} else {
 		r.pdf.SetFontWithStyle("msyh", gopdf.Regular, int(r.fontSize))
 	}
 	if !node.IsFencedCodeBlock {
 		// 缩进代码块处理
-		r.Newline()
-		r.WriteString(util.BytesToStr(node.Tokens))
-		r.Newline()
+		r.renderCodeBlockContent(util.BytesToStr(node.Tokens))
 		return ast.WalkStop
 	}
 	return ast.WalkContinue
@@ -262,10 +263,18 @@ func (r *PdfRenderer) renderCodeBlock(node *ast.Node, entering bool) ast.WalkSta
 
 // renderCodeBlockCode 进行代码块 HTML 渲染，实现语法高亮。
 func (r *PdfRenderer) renderCodeBlockCode(node *ast.Node, entering bool) ast.WalkStatus {
-	r.Newline()
-	r.WriteString(util.BytesToStr(node.Tokens))
-	r.Newline()
+	r.renderCodeBlockContent(util.BytesToStr(node.Tokens))
 	return ast.WalkStop
+}
+
+func (r *PdfRenderer) renderCodeBlockContent(content string) {
+	r.Newline()
+	r.pdf.SetY(r.pdf.GetY() + 6)
+	r.pdf.SetTextColor(86, 158, 61)
+	r.WriteString(content)
+	r.pdf.SetTextColor(0, 0, 0)
+	r.pdf.SetY(r.pdf.GetY() + 6)
+	r.Newline()
 }
 
 func (r *PdfRenderer) renderCodeBlockCloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
@@ -382,12 +391,14 @@ func (r *PdfRenderer) renderTableHead(node *ast.Node, entering bool) ast.WalkSta
 func (r *PdfRenderer) renderTable(node *ast.Node, entering bool) ast.WalkStatus {
 	if entering {
 		r.Newline()
-		r.pdf.SetFontWithStyle("consola,msyh", gopdf.Regular, int(r.fontSize))
+		r.pdf.SetY(r.pdf.GetY() + 6)
+		r.pdf.SetFontWithStyle("cour,msyh", gopdf.Regular, int(r.fontSize))
 	} else {
 		if nil != node.FirstChild.Next {
 			//r.tag("/tbody", nil, false)
 		}
 		r.pdf.SetFontWithStyle("msyh", gopdf.Regular, int(r.fontSize))
+		r.pdf.SetY(r.pdf.GetY() + 6)
 		r.Newline()
 	}
 	return ast.WalkContinue
@@ -404,7 +415,7 @@ func (r *PdfRenderer) renderStrikethrough1OpenMarker(node *ast.Node, entering bo
 
 func (r *PdfRenderer) renderStrikethrough1CloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
 	x := r.popX()
-	r.pdf.Line(x, r.pdf.GetY()+r.fontSize/2, r.pdf.GetX(), r.pdf.GetY()+r.fontSize/2)
+	r.pdf.Line(x, r.pdf.GetY()+float64(r.fontSize)/2, r.pdf.GetX(), r.pdf.GetY()+float64(r.fontSize)/2)
 	return ast.WalkStop
 }
 
@@ -415,7 +426,7 @@ func (r *PdfRenderer) renderStrikethrough2OpenMarker(node *ast.Node, entering bo
 
 func (r *PdfRenderer) renderStrikethrough2CloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
 	x := r.popX()
-	r.pdf.Line(x, r.pdf.GetY()+r.fontSize/2, r.pdf.GetX(), r.pdf.GetY()+r.fontSize/2)
+	r.pdf.Line(x, r.pdf.GetY()+float64(r.fontSize)/2, r.pdf.GetX(), r.pdf.GetY()+float64(r.fontSize)/2)
 	return ast.WalkStop
 }
 
@@ -432,7 +443,9 @@ func (r *PdfRenderer) renderLinkSpace(node *ast.Node, entering bool) ast.WalkSta
 }
 
 func (r *PdfRenderer) renderLinkText(node *ast.Node, entering bool) ast.WalkStatus {
-	r.Write(node.Tokens)
+	if ast.NodeImage != node.Parent.Type {
+		r.Write(node.Tokens)
+	}
 	return ast.WalkStop
 }
 
@@ -459,11 +472,16 @@ func (r *PdfRenderer) renderBang(node *ast.Node, entering bool) ast.WalkStatus {
 func (r *PdfRenderer) renderImage(node *ast.Node, entering bool) ast.WalkStatus {
 	if entering {
 		if 0 == r.DisableTags {
-			r.WriteString("<img src=\"")
 			destTokens := node.ChildByType(ast.NodeLinkDest).Tokens
 			destTokens = r.Tree.Context.RelativePath(destTokens)
-			r.Write(destTokens)
-			r.WriteString("\" alt=\"")
+			src := util.BytesToStr(destTokens)
+			_, height := r.getImgSize(src)
+			y := r.pdf.GetY()
+			if math.Ceil(y)+height > math.Floor(r.pageSize.H-r.margin) {
+				r.pdf.AddPage()
+			}
+			r.pdf.Image(src, r.pdf.GetX(), r.pdf.GetY(), nil)
+			r.pdf.SetY(r.pdf.GetY() + height)
 		}
 		r.DisableTags++
 		return ast.WalkContinue
@@ -471,13 +489,13 @@ func (r *PdfRenderer) renderImage(node *ast.Node, entering bool) ast.WalkStatus 
 
 	r.DisableTags--
 	if 0 == r.DisableTags {
-		r.WriteString("\"")
-		if title := node.ChildByType(ast.NodeLinkTitle); nil != title && nil != title.Tokens {
-			r.WriteString(" title=\"")
-			r.Write(title.Tokens)
-			r.WriteString("\"")
-		}
-		r.WriteString(" />")
+		//r.WriteString("\"")
+		//if title := node.ChildByType(ast.NodeLinkTitle); nil != title && nil != title.Tokens {
+		//	r.WriteString(" title=\"")
+		//	r.Write(title.Tokens)
+		//	r.WriteString("\"")
+		//}
+		//r.WriteString(" />")
 	}
 	return ast.WalkContinue
 }
@@ -531,7 +549,6 @@ func (r *PdfRenderer) renderParagraph(node *ast.Node, entering bool) ast.WalkSta
 		r.Newline()
 		r.pdf.SetY(r.pdf.GetY() + 6)
 	} else {
-		r.pdf.SetY(r.pdf.GetY() + 6)
 		r.Newline()
 	}
 	return ast.WalkContinue
@@ -552,13 +569,11 @@ func (r *PdfRenderer) renderCodeSpanOpenMarker(node *ast.Node, entering bool) as
 }
 
 func (r *PdfRenderer) renderCodeSpanContent(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pdf.SetFontWithStyle("consola,msyh", gopdf.Regular, int(r.fontSize))
+	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, int(r.fontSize))
 	content := util.BytesToStr(node.Tokens)
-	width, _ := r.pdf.MeasureTextWidth(content)
-	r.pdf.SetFillColor(227, 236, 245)
-	r.pdf.RectFromUpperLeftWithStyle(r.pdf.GetX(), r.pdf.GetY(), width, r.fontSize, "F")
-	r.pdf.SetFillColor(0, 0, 0)
+	r.pdf.SetTextColor(255, 153, 51)
 	r.WriteString(content)
+	r.pdf.SetTextColor(0, 0, 0)
 	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, int(r.fontSize))
 	return ast.WalkStop
 }
@@ -636,7 +651,7 @@ func (r *PdfRenderer) renderBlockquoteMarker(node *ast.Node, entering bool) ast.
 func (r *PdfRenderer) renderHeading(node *ast.Node, entering bool) ast.WalkStatus {
 	if entering {
 		r.Newline()
-		r.pdf.SetY(r.pdf.GetY() + 6)
+		r.pdf.SetY(r.pdf.GetY() + 10)
 		headingSize := r.heading2Size
 		switch node.HeadingLevel {
 		case 1:
@@ -652,7 +667,7 @@ func (r *PdfRenderer) renderHeading(node *ast.Node, entering bool) ast.WalkStatu
 		case 6:
 			headingSize = r.heading6Size
 		default:
-			headingSize = r.fontSize
+			headingSize = float64(r.fontSize)
 		}
 
 		r.pdf.SetFontWithStyle("msyhb", gopdf.Bold, int(math.Round(headingSize)))
@@ -673,7 +688,6 @@ func (r *PdfRenderer) renderHeading(node *ast.Node, entering bool) ast.WalkStatu
 		//}
 	} else {
 		r.pdf.SetFontWithStyle("msyh", gopdf.Regular, int(r.fontSize))
-		r.pdf.SetY(r.pdf.GetY() + 6)
 		r.Newline()
 	}
 	return ast.WalkContinue
@@ -790,7 +804,7 @@ func (r *PdfRenderer) WriteString(content string) {
 			}
 			r.pdf.Cell(nil, line)
 			if isMultiLine {
-				r.pdf.Br(r.fontSize + 2)
+				r.pdf.Br(float64(r.fontSize) + 2)
 			}
 		}
 		r.LastOut = content[length-1]
@@ -803,4 +817,33 @@ func (r *PdfRenderer) Newline() {
 		r.pdf.Br(r.lineHeight)
 		r.LastOut = lex.ItemNewline
 	}
+}
+
+func (r *PdfRenderer) getImgSize(imgPath string) (width, height float64) {
+	file, err := os.Open(imgPath)
+	if nil != err {
+		log.Fatal(err)
+	}
+	img, _, err := image.Decode(file)
+	if nil != err {
+		log.Fatal(err)
+	}
+
+	imageRect := img.Bounds()
+	k := 1
+	w := -128
+	h := -128
+	if w < 0 {
+		w = -imageRect.Dx() * 72 / w / k
+	}
+	if h < 0 {
+		h = -imageRect.Dy() * 72 / h / k
+	}
+	if w == 0 {
+		w = h * imageRect.Dx() / imageRect.Dy()
+	}
+	if h == 0 {
+		h = w * imageRect.Dy() / imageRect.Dx()
+	}
+	return float64(w), float64(h)
 }

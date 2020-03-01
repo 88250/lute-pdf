@@ -52,6 +52,8 @@ Vditor 是一款**所见即所得**编辑器，支持 *Markdown*。
 ![alt 文本](http://image-path.png "图片 Title 值")
 ```
 
+![alt 文本](sample.jpg)
+
 支持复制粘贴直接上传。
 
 ### 代码块
