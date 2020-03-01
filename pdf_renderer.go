@@ -146,7 +146,7 @@ func NewPdfRenderer(tree *parse.Tree) render.Renderer {
 }
 
 func (r *PdfRenderer) renderBackslashContent(node *ast.Node, entering bool) ast.WalkStatus {
-	r.Write(util.EscapeHTML(node.Tokens))
+	r.Write(node.Tokens)
 	return ast.WalkStop
 }
 
@@ -245,19 +245,35 @@ func (r *PdfRenderer) renderCodeBlock(node *ast.Node, entering bool) ast.WalkSta
 	if !node.IsFencedCodeBlock {
 		// 缩进代码块处理
 		r.Newline()
-		tokens := util.EscapeHTML(node.FirstChild.Tokens)
-		r.Write(tokens)
+		content := util.BytesToStr(node.Tokens)
+		lines, _ := r.pdf.SplitText(content, r.pageSize.W-r.margin*2)
+		isMultiLine := 1 < len(lines)
+		for _, line := range lines {
+			r.WriteString(line)
+			if isMultiLine {
+				r.Newline()
+			}
+		}
 		r.Newline()
 		return ast.WalkStop
 	}
-	r.Newline()
 	return ast.WalkContinue
 }
 
 // renderCodeBlockCode 进行代码块 HTML 渲染，实现语法高亮。
 func (r *PdfRenderer) renderCodeBlockCode(node *ast.Node, entering bool) ast.WalkStatus {
-	r.Write(util.EscapeHTML(node.Tokens))
-	return ast.WalkContinue
+	r.Newline()
+	content := util.BytesToStr(node.Tokens)
+	lines, _ := r.pdf.SplitText(content, r.pageSize.W-r.margin*2)
+	isMultiLine := 1 < len(lines)
+	for _, line := range lines {
+		r.WriteString(line)
+		if isMultiLine {
+			r.Newline()
+		}
+	}
+	r.Newline()
+	return ast.WalkStop
 }
 
 func (r *PdfRenderer) renderCodeBlockCloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
@@ -297,7 +313,7 @@ func (r *PdfRenderer) renderInlineMathCloseMarker(node *ast.Node, entering bool)
 }
 
 func (r *PdfRenderer) renderInlineMathContent(node *ast.Node, entering bool) ast.WalkStatus {
-	r.Write(util.EscapeHTML(node.Tokens))
+	r.Write(node.Tokens)
 	return ast.WalkStop
 }
 
@@ -317,7 +333,7 @@ func (r *PdfRenderer) renderMathBlockCloseMarker(node *ast.Node, entering bool) 
 }
 
 func (r *PdfRenderer) renderMathBlockContent(node *ast.Node, entering bool) ast.WalkStatus {
-	r.Write(util.EscapeHTML(node.Tokens))
+	r.Write(node.Tokens)
 	return ast.WalkStop
 }
 
@@ -443,7 +459,7 @@ func (r *PdfRenderer) renderLinkText(node *ast.Node, entering bool) ast.WalkStat
 	if r.Option.AutoSpace {
 		r.Space(node)
 	}
-	r.Write(util.EscapeHTML(node.Tokens))
+	r.Write(node.Tokens)
 	return ast.WalkStop
 }
 
@@ -473,7 +489,7 @@ func (r *PdfRenderer) renderImage(node *ast.Node, entering bool) ast.WalkStatus 
 			r.WriteString("<img src=\"")
 			destTokens := node.ChildByType(ast.NodeLinkDest).Tokens
 			destTokens = r.Tree.Context.RelativePath(destTokens)
-			r.Write(util.EscapeHTML(destTokens))
+			r.Write(destTokens)
 			r.WriteString("\" alt=\"")
 		}
 		r.DisableTags++
@@ -485,7 +501,7 @@ func (r *PdfRenderer) renderImage(node *ast.Node, entering bool) ast.WalkStatus 
 		r.WriteString("\"")
 		if title := node.ChildByType(ast.NodeLinkTitle); nil != title && nil != title.Tokens {
 			r.WriteString(" title=\"")
-			r.Write(util.EscapeHTML(title.Tokens))
+			r.Write(title.Tokens)
 			r.WriteString("\"")
 		}
 		r.WriteString(" />")
@@ -504,7 +520,7 @@ func (r *PdfRenderer) renderLink(node *ast.Node, entering bool) ast.WalkStatus {
 		dest := node.ChildByType(ast.NodeLinkDest)
 		destTokens := dest.Tokens
 		destTokens = r.Tree.Context.RelativePath(destTokens)
-		r.pdf.AddExternalLink(util.BytesToStr(util.EscapeHTML(destTokens)), x, r.pdf.GetY(), width, r.lineHeight)
+		r.pdf.AddExternalLink(util.BytesToStr(destTokens), x, r.pdf.GetY(), width, r.lineHeight)
 		// TODO: r.LinkTextAutoSpaceNext(node)
 		r.pdf.SetTextColor(0, 0, 0)
 	}
@@ -561,7 +577,7 @@ func (r *PdfRenderer) renderText(node *ast.Node, entering bool) ast.WalkStatus {
 		r.ChinesePunct(node)
 	}
 
-	text := util.BytesToStr(util.EscapeHTML(node.Tokens))
+	text := util.BytesToStr(node.Tokens)
 	width := gopdf.PageSizeA4.W - r.margin - r.pdf.GetX()
 	if 0 > width {
 		width = gopdf.PageSizeA4.W - r.margin
@@ -605,7 +621,7 @@ func (r *PdfRenderer) renderCodeSpanOpenMarker(node *ast.Node, entering bool) as
 }
 
 func (r *PdfRenderer) renderCodeSpanContent(node *ast.Node, entering bool) ast.WalkStatus {
-	content := util.BytesToStr(util.EscapeHTML(node.Tokens))
+	content := util.BytesToStr(node.Tokens)
 	width, _ := r.pdf.MeasureTextWidth(content)
 	r.pdf.SetFillColor(227, 236, 245)
 	r.pdf.RectFromUpperLeftWithStyle(r.pdf.GetX(), r.pdf.GetY(), width, r.fontSize, "F")
