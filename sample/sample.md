@@ -1,6 +1,6 @@
 ## 简介
 
-Lute PDF 是一款通过 Markdown 生成 PDF 的小工具。通过 [Lute](https://github.com/88250/lute) 解析 Markdown 然后再通过 [gopdf](github.com/signintech/gopdf) 生成 PDF。
+Lute PDF 是一款将 Markdown 文本转换为 PDF 的小工具。通过 [Lute](https://github.com/88250/lute) 解析 Markdown 然后再通过 [gopdf](github.com/signintech/gopdf) 生成 PDF。
 
 ## 特性
 
