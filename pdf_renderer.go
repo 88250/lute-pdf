@@ -1,3 +1,13 @@
+// Lute PDF - 一款通过 Markdown 生成 PDF 的小工具
+// Copyright (c) 2020-present, b3log.org
+//
+// LianDi is licensed under Mulan PSL v2.
+// You can use this software according to the terms and conditions of the Mulan PSL v2.
+// You may obtain a copy of Mulan PSL v2 at:
+//         http://license.coscl.org.cn/MulanPSL2
+// THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+// See the Mulan PSL v2 for more details.
+
 package main
 
 import (
@@ -27,7 +37,7 @@ type PdfRenderer struct {
 	needRenderFootnotesDef bool
 	headingCnt             int
 
-	*PdfCover                 // 封面
+	Cover        *PdfCover    // 封面
 	pdf          *gopdf.GoPdf // PDF 生成器句柄
 	pageSize     *gopdf.Rect  // 页面大小
 	zoom         float64      // 字体、行高大小倍数
@@ -47,43 +57,43 @@ type PdfRenderer struct {
 
 // PdfCover 描述了 PDF 封面。
 type PdfCover struct {
-	Title        string
-	AuthorLabel  string
-	Author       string
-	AuthorLink   string
-	LinkLabel    string
-	Link         string
-	SourceLabel  string
-	Source       string
-	SourceLink   string
-	LicenseLabel string
-	License      string
-	LicenseLink  string
-	LogoImgPath  string
-	LogoTitle    string
+	Title         string
+	AuthorLabel   string
+	Author        string
+	AuthorLink    string
+	LinkLabel     string
+	Link          string
+	SourceLabel   string
+	Source        string
+	SourceLink    string
+	LicenseLabel  string
+	License       string
+	LicenseLink   string
+	LogoImgPath   string
+	LogoTitle     string
 	LogoTitleLink string
 }
 
 func (r *PdfRenderer) renderCover() {
 	r.pdf.AddPage()
 
-	imgW, imgH := r.getImgSize(r.LogoImgPath)
+	imgW, imgH := r.getImgSize(r.Cover.LogoImgPath)
 	x := (r.pageSize.W-r.margin*2)/2 - imgW/2
 	y := r.pageSize.H/2 - r.margin - 224
-	r.pdf.Image(r.LogoImgPath, x, y, nil)
+	r.pdf.Image(r.Cover.LogoImgPath, x, y, nil)
 	r.pdf.SetY(y)
 	r.pdf.Br(imgH + 6)
 	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, 20)
-	width, _ := r.pdf.MeasureTextWidth(r.LogoTitle)
+	width, _ := r.pdf.MeasureTextWidth(r.Cover.LogoTitle)
 	x = (r.pageSize.W-r.margin*2)/2 - width/2
 	r.pdf.SetX(x)
 	y = r.pdf.GetY()
-	r.pdf.Cell(nil, r.LogoTitle)
-	r.pdf.AddExternalLink(r.LogoTitleLink, x, y, width, 20)
+	r.pdf.Cell(nil, r.Cover.LogoTitle)
+	r.pdf.AddExternalLink(r.Cover.LogoTitleLink, x, y, width, 20)
 	r.pdf.Br(48)
 
 	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, 28)
-	lines, _ := r.pdf.SplitText(r.PdfCover.Title, r.pageSize.W-r.margin*2)
+	lines, _ := r.pdf.SplitText(r.Cover.Title, r.pageSize.W-r.margin*2)
 	for _, line := range lines {
 		width, _ := r.pdf.MeasureTextWidth(line)
 		x = (r.pageSize.W-r.margin*2)/2 - width/2
@@ -96,39 +106,39 @@ func (r *PdfRenderer) renderCover() {
 	r.pdf.Br(45)
 	r.pdf.SetX(r.margin)
 	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, fontSize)
-	r.pdf.Cell(nil, r.AuthorLabel)
+	r.pdf.Cell(nil, r.Cover.AuthorLabel)
 	x = r.pdf.GetX()
-	width, _ = r.pdf.MeasureTextWidth(r.Author)
+	width, _ = r.pdf.MeasureTextWidth(r.Cover.Author)
 	r.pdf.SetTextColor(66, 133, 244)
-	r.pdf.Cell(nil, r.Author)
-	r.pdf.AddExternalLink(r.AuthorLink, x, r.pdf.GetY(), width, float64(fontSize))
+	r.pdf.Cell(nil, r.Cover.Author)
+	r.pdf.AddExternalLink(r.Cover.AuthorLink, x, r.pdf.GetY(), width, float64(fontSize))
 	r.pdf.SetTextColor(0, 0, 0)
 	r.pdf.Br(22)
 
-	r.pdf.Cell(nil, r.LinkLabel)
+	r.pdf.Cell(nil, r.Cover.LinkLabel)
 	x = r.pdf.GetX()
-	width, _ = r.pdf.MeasureTextWidth(r.Link)
+	width, _ = r.pdf.MeasureTextWidth(r.Cover.Link)
 	r.pdf.SetTextColor(66, 133, 244)
-	r.pdf.Cell(nil, r.Link)
-	r.pdf.AddExternalLink(r.Link, x, r.pdf.GetY(), width, float64(fontSize))
+	r.pdf.Cell(nil, r.Cover.Link)
+	r.pdf.AddExternalLink(r.Cover.Link, x, r.pdf.GetY(), width, float64(fontSize))
 	r.pdf.SetTextColor(0, 0, 0)
 	r.pdf.Br(22)
 
-	r.pdf.Cell(nil, r.SourceLabel)
+	r.pdf.Cell(nil, r.Cover.SourceLabel)
 	x = r.pdf.GetX()
-	width, _ = r.pdf.MeasureTextWidth(r.Source)
+	width, _ = r.pdf.MeasureTextWidth(r.Cover.Source)
 	r.pdf.SetTextColor(66, 133, 244)
-	r.pdf.Cell(nil, r.Source)
-	r.pdf.AddExternalLink(r.SourceLink, x, r.pdf.GetY(), width, float64(fontSize))
+	r.pdf.Cell(nil, r.Cover.Source)
+	r.pdf.AddExternalLink(r.Cover.SourceLink, x, r.pdf.GetY(), width, float64(fontSize))
 	r.pdf.SetTextColor(0, 0, 0)
 	r.pdf.Br(22)
 
-	r.pdf.Cell(nil, r.LicenseLabel)
+	r.pdf.Cell(nil, r.Cover.LicenseLabel)
 	x = r.pdf.GetX()
-	width, _ = r.pdf.MeasureTextWidth(r.License)
+	width, _ = r.pdf.MeasureTextWidth(r.Cover.License)
 	r.pdf.SetTextColor(66, 133, 244)
-	r.pdf.Cell(nil, r.License)
-	r.pdf.AddExternalLink(r.LicenseLink, x, r.pdf.GetY(), width, float64(fontSize))
+	r.pdf.Cell(nil, r.Cover.License)
+	r.pdf.AddExternalLink(r.Cover.LicenseLink, x, r.pdf.GetY(), width, float64(fontSize))
 	r.pdf.SetTextColor(0, 0, 0)
 	r.pdf.Br(20)
 
@@ -1063,7 +1073,7 @@ func (r *PdfRenderer) addPage() {
 }
 
 func (r *PdfRenderer) renderFooter() {
-	footer := r.LinkLabel + r.Link
+	footer := r.Cover.LinkLabel + r.Cover.Link
 	r.pdf.SetFont("msyh", "R", 8)
 	r.pdf.SetTextColor(0, 0, 0)
 	width, _ := r.pdf.MeasureTextWidth(footer)

@@ -1,3 +1,13 @@
+// Lute PDF - 一款通过 Markdown 生成 PDF 的小工具
+// Copyright (c) 2020-present, b3log.org
+//
+// LianDi is licensed under Mulan PSL v2.
+// You can use this software according to the terms and conditions of the Mulan PSL v2.
+// You may obtain a copy of Mulan PSL v2 at:
+//         http://license.coscl.org.cn/MulanPSL2
+// THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+// See the Mulan PSL v2 for more details.
+
 package main
 
 import (
@@ -35,7 +45,7 @@ func main() {
 	}
 	renderer := NewPdfRenderer(tree)
 
-	renderer.PdfCover = &PdfCover{
+	renderer.Cover = &PdfCover{
 		Title:         "Markdown 使用指南 - 基础语法",
 		AuthorLabel:   "　　作者：",
 		Author:        "88250",
