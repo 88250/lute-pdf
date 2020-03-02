@@ -803,17 +803,38 @@ func (r *PdfRenderer) Write(content []byte) {
 // WriteString 输出指定的字符串 content。
 func (r *PdfRenderer) WriteString(content string) {
 	if length := len(content); 0 < length {
-		lines, _ := r.pdf.SplitText(content, r.pageSize.W-r.margin*2)
-		isMultiLine := 1 < len(lines)
-		for _, line := range lines {
+		buf := ""
+		x := r.pdf.GetX()
+		runes := []rune(content)
+		pageRight := r.pageSize.W - r.margin*2
+		for i, c := range runes {
 			if r.pdf.GetY() > r.pageSize.H-r.margin*2 {
 				r.pdf.AddPage()
 			}
-			r.pdf.Cell(nil, line)
-			if isMultiLine {
-				r.pdf.Br(float64(r.fontSize) + 2)
+
+			width, _ := r.pdf.MeasureTextWidth(string(c))
+			if i < len(runes)-1 {
+				nextC := runes[i+1]
+				nextWidth, _ := r.pdf.MeasureTextWidth(string(nextC))
+				if x+width+nextWidth > pageRight {
+					r.pdf.Cell(nil, buf)
+					buf = ""
+					r.pdf.Br(float64(r.fontSize) + 2)
+					x = r.pdf.GetX()
+					continue
+				}
 			}
+
+			buf += string(c)
+			x += width
 		}
+		if "" != buf {
+			if r.pdf.GetY() > r.pageSize.H-r.margin*2 {
+				r.pdf.AddPage()
+			}
+			r.pdf.Cell(nil, buf)
+		}
+
 		r.LastOut = content[length-1]
 	}
 }
