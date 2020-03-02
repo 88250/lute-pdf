@@ -62,7 +62,7 @@ func main() {
 		LogoTitle:     "B3log 开源",
 		LogoTitleLink: "https://b3log.org",
 	}
-	renderer.renderCover()
+	renderer.RenderCover()
 
 	_, err = renderer.Render()
 	if nil != err {

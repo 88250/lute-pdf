@@ -74,7 +74,7 @@ type PdfCover struct {
 	LogoTitleLink string
 }
 
-func (r *PdfRenderer) renderCover() {
+func (r *PdfRenderer) RenderCover() {
 	r.pdf.AddPage()
 
 	logoImgPath := r.downloadImg(r.Cover.LogoImgPath)
