@@ -149,7 +149,7 @@ func NewPdfRenderer(tree *parse.Tree) *PdfRenderer {
 		log.Fatal(err)
 	}
 
-	pdf.SetFontWithStyle("msyh", gopdf.Regular, ret.fontSize)
+	ret.pushFont(&Font{"msyh", "R", ret.fontSize})
 	pdf.SetMargins(ret.margin, ret.margin, ret.margin, ret.margin)
 
 	ret.RendererFuncs[ast.NodeDocument] = ret.renderDocument
@@ -366,11 +366,10 @@ func (r *PdfRenderer) renderCodeBlockOpenMarker(node *ast.Node, entering bool) a
 }
 
 func (r *PdfRenderer) renderEmojiAlias(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pdf.SetFontWithStyle("emoji", gopdf.Regular, r.fontSize)
+	r.pushFont(&Font{"emoji", "R", r.fontSize})
 	alias := node.Tokens[1 : len(node.Tokens)-1]
-	emojiUnicode := r.Option.AliasEmoji[string(alias)]
-	r.WriteString(emojiUnicode)
-	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, r.fontSize)
+	r.WriteString(r.Option.AliasEmoji[string(alias)])
+	r.popFont()
 	return ast.WalkStop
 }
 
@@ -380,9 +379,9 @@ func (r *PdfRenderer) renderEmojiImg(node *ast.Node, entering bool) ast.WalkStat
 }
 
 func (r *PdfRenderer) renderEmojiUnicode(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pdf.SetFontWithStyle("emoji", gopdf.Regular, r.fontSize)
+	r.pushFont(&Font{"emoji", "R", r.fontSize})
 	r.Write(node.Tokens)
-	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, r.fontSize)
+	r.popFont()
 	return ast.WalkStop
 }
 
@@ -472,9 +471,9 @@ func (r *PdfRenderer) renderTableRow(node *ast.Node, entering bool) ast.WalkStat
 
 func (r *PdfRenderer) renderTableHead(node *ast.Node, entering bool) ast.WalkStatus {
 	if entering {
-		r.pdf.SetFontWithStyle("msyhb", gopdf.Bold, r.fontSize)
+		r.pushFont(&Font{"msyhb", "B", r.fontSize})
 	} else {
-		r.pdf.SetFontWithStyle("msyh", gopdf.Regular, r.fontSize)
+		r.popFont()
 	}
 	return ast.WalkContinue
 }
@@ -676,22 +675,22 @@ func (r *PdfRenderer) renderEmphasis(node *ast.Node, entering bool) ast.WalkStat
 }
 
 func (r *PdfRenderer) renderEmAsteriskOpenMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pdf.SetFontWithStyle("msyh", gopdf.Italic, r.fontSize)
+	r.pushFont(&Font{"msyh", "I", r.fontSize})
 	return ast.WalkStop
 }
 
 func (r *PdfRenderer) renderEmAsteriskCloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, r.fontSize)
+	r.popFont()
 	return ast.WalkStop
 }
 
 func (r *PdfRenderer) renderEmUnderscoreOpenMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pdf.SetFontWithStyle("msyh", gopdf.Italic, r.fontSize)
+	r.pushFont(&Font{"msyh", "I", r.fontSize})
 	return ast.WalkStop
 }
 
 func (r *PdfRenderer) renderEmUnderscoreCloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, r.fontSize)
+	r.popFont()
 	return ast.WalkStop
 }
 
@@ -700,22 +699,22 @@ func (r *PdfRenderer) renderStrong(node *ast.Node, entering bool) ast.WalkStatus
 }
 
 func (r *PdfRenderer) renderStrongA6kOpenMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pdf.SetFontWithStyle("msyhb", gopdf.Bold, r.fontSize)
+	r.pushFont(&Font{"msyhb", "B", r.fontSize})
 	return ast.WalkStop
 }
 
 func (r *PdfRenderer) renderStrongA6kCloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, r.fontSize)
+	r.popFont()
 	return ast.WalkStop
 }
 
 func (r *PdfRenderer) renderStrongU8eOpenMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pdf.SetFontWithStyle("msyhb", gopdf.Bold, r.fontSize)
+	r.pushFont(&Font{"msyhb", "B", r.fontSize})
 	return ast.WalkStop
 }
 
 func (r *PdfRenderer) renderStrongU8eCloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, r.fontSize)
+	r.popFont()
 	return ast.WalkStop
 }
 
@@ -758,25 +757,9 @@ func (r *PdfRenderer) renderHeading(node *ast.Node, entering bool) ast.WalkStatu
 		default:
 			headingSize = float64(r.fontSize)
 		}
-
-		r.pdf.SetFontWithStyle("msyhb", gopdf.Bold, int(math.Round(headingSize)))
-
-		// TODO: ToC
-		//if r.Option.ToC {
-		//	r.WriteString(" id=\"toc_h" + fmt.Sprint(node.HeadingLevel) + "_" + strconv.Itoa(r.headingCnt) + "\"")
-		//	r.headingCnt++
-		//}
-		// TODO: HeadingAnchor
-		//if r.Option.HeadingAnchor {
-		//	anchor := node.Text()
-		//	anchor = strings.ReplaceAll(anchor, " ", "-")
-		//	anchor = strings.ReplaceAll(anchor, ".", "")
-		//	r.tag("a", [][]string{{"id", "vditorAnchor-" + anchor}, {"class", "vditor-anchor"}, {"href", "#" + anchor}}, false)
-		//	r.WriteString(`<svg viewBox="0 0 16 16" version="1.1" width="16" height="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg>`)
-		//	r.tag("/a", nil, false)
-		//}
+		r.pushFont(&Font{"msyhb", "B", int(math.Round(headingSize))})
 	} else {
-		r.pdf.SetFontWithStyle("msyh", gopdf.Regular, r.fontSize)
+		r.popFont()
 		r.Newline()
 	}
 	return ast.WalkContinue
@@ -863,7 +846,7 @@ func (r *PdfRenderer) pushX(x float64) {
 
 func (r *PdfRenderer) popX() float64 {
 	ret := r.x[len(r.x)-1]
-	r.x = r.x[:len(r.x)]
+	r.x = r.x[:len(r.x)-1]
 	return ret
 }
 
@@ -873,8 +856,13 @@ func (r *PdfRenderer) pushFont(font *Font) {
 
 func (r *PdfRenderer) popFont() *Font {
 	ret := r.fonts[len(r.fonts)-1]
-	r.fonts = r.fonts[:len(r.fonts)]
+	r.fonts = r.fonts[:len(r.fonts)-1]
+	latestFont = r.fonts[len(r.fonts)-1]
 	return ret
+}
+
+func (r *PdfRenderer) peekFont() *Font {
+	return r.fonts[len(r.fonts)-1]
 }
 
 func (r *PdfRenderer) countParentContainerBlocks(n *ast.Node) (ret int) {
@@ -896,6 +884,8 @@ func (r *PdfRenderer) Write(content []byte) {
 	r.WriteString(util.BytesToStr(content))
 }
 
+var latestFont *Font
+
 // WriteString 输出指定的字符串 content。
 func (r *PdfRenderer) WriteString(content string) {
 	if length := len(content); 0 < length {
@@ -904,6 +894,10 @@ func (r *PdfRenderer) WriteString(content string) {
 		startX := x
 		runes := []rune(content)
 		pageRight := r.pageSize.W - r.margin*2
+		font := r.peekFont()
+		if latestFont != font {
+			r.pdf.SetFont(font.family, font.style, font.size)
+		}
 		for i, c := range runes {
 			if r.pdf.GetY() > r.pageSize.H-r.margin*2 {
 				r.addPage()
@@ -1037,7 +1031,7 @@ func (r *PdfRenderer) renderFooter() {
 	r.pdf.SetX(x)
 	r.pdf.SetY(r.pageSize.H - r.margin)
 	r.pdf.Cell(nil, footer)
-	//r.pdf.SetFontWithStyle("msyh", gopdf.Regular, r.fontSize)
+	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, r.fontSize)
 }
 
 type Font struct {
