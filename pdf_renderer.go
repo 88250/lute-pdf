@@ -61,6 +61,7 @@ type PdfCover struct {
 	LicenseLink  string
 	LogoImgPath  string
 	LogoTitle    string
+	LogoTitleLink string
 }
 
 func (r *PdfRenderer) renderCover() {
@@ -78,7 +79,7 @@ func (r *PdfRenderer) renderCover() {
 	r.pdf.SetX(x)
 	y = r.pdf.GetY()
 	r.pdf.Cell(nil, r.LogoTitle)
-	r.pdf.AddExternalLink("https://hacpai.com/recent/perfect", x, y, width, 20)
+	r.pdf.AddExternalLink(r.LogoTitleLink, x, y, width, 20)
 	r.pdf.Br(48)
 
 	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, 28)
