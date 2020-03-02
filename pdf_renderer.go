@@ -400,6 +400,11 @@ func (r *PdfRenderer) renderTableRow(node *ast.Node, entering bool) ast.WalkStat
 }
 
 func (r *PdfRenderer) renderTableHead(node *ast.Node, entering bool) ast.WalkStatus {
+	if entering {
+		r.pdf.SetFontWithStyle("msyhb", gopdf.Bold, r.fontSize)
+	} else {
+		r.pdf.SetFontWithStyle("msyh", gopdf.Regular, r.fontSize)
+	}
 	return ast.WalkContinue
 }
 
@@ -527,14 +532,12 @@ func (r *PdfRenderer) renderLink(node *ast.Node, entering bool) ast.WalkStatus {
 }
 
 func (r *PdfRenderer) renderHTML(node *ast.Node, entering bool) ast.WalkStatus {
-	r.Newline()
-	r.Write(node.Tokens)
-	r.Newline()
+	r.renderCodeBlockLike(node.Tokens)
 	return ast.WalkStop
 }
 
 func (r *PdfRenderer) renderInlineHTML(node *ast.Node, entering bool) ast.WalkStatus {
-	r.Write(node.Tokens)
+	r.renderCodeSpanLike(node.Tokens)
 	return ast.WalkStop
 }
 
