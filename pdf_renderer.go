@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"image"
 	"io/ioutil"
@@ -803,7 +804,7 @@ func (r *PdfRenderer) Write(content []byte) {
 // WriteString 输出指定的字符串 content。
 func (r *PdfRenderer) WriteString(content string) {
 	if length := len(content); 0 < length {
-		buf := ""
+		buf := bytes.Buffer{}
 		x := r.pdf.GetX()
 		runes := []rune(content)
 		pageRight := r.pageSize.W - r.margin*2
@@ -817,22 +818,22 @@ func (r *PdfRenderer) WriteString(content string) {
 				nextC := runes[i+1]
 				nextWidth, _ := r.pdf.MeasureTextWidth(string(nextC))
 				if x+width+nextWidth > pageRight {
-					r.pdf.Cell(nil, buf)
-					buf = ""
+					r.pdf.Cell(nil, buf.String())
+					buf.Reset()
 					r.pdf.Br(float64(r.fontSize) + 2)
 					x = r.pdf.GetX()
 					continue
 				}
 			}
 
-			buf += string(c)
+			buf.WriteRune(c)
 			x += width
 		}
-		if "" != buf {
+		if 0 < buf.Len() {
 			if r.pdf.GetY() > r.pageSize.H-r.margin*2 {
 				r.pdf.AddPage()
 			}
-			r.pdf.Cell(nil, buf)
+			r.pdf.Cell(nil, buf.String())
 		}
 
 		r.LastOut = content[length-1]
