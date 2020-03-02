@@ -3,8 +3,11 @@ package main
 import (
 	"fmt"
 	"image"
+	"io/ioutil"
 	"log"
 	"math"
+	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -468,6 +471,7 @@ func (r *PdfRenderer) renderImage(node *ast.Node, entering bool) ast.WalkStatus 
 			destTokens := node.ChildByType(ast.NodeLinkDest).Tokens
 			destTokens = r.Tree.Context.RelativePath(destTokens)
 			src := util.BytesToStr(destTokens)
+			src = r.downloadImg(src)
 			_, height := r.getImgSize(src)
 			y := r.pdf.GetY()
 			if math.Ceil(y)+height > math.Floor(r.pageSize.H-r.margin) {
@@ -811,6 +815,39 @@ func (r *PdfRenderer) Newline() {
 	}
 }
 
+func (r *PdfRenderer) downloadImg(src string) (localPath string) {
+	u, err := url.Parse(src)
+	if nil != err {
+		log.Printf("image src [%s] is not an valid URL, treat it as local path", src)
+		return src
+	}
+
+	if !strings.HasPrefix(u.Scheme, "http") {
+		log.Printf("image src [%s] scheme is not [http] or [https], treat it as local path", src)
+		return src
+	}
+
+	client := http.Client{}
+	resp, err := client.Get(src)
+	if nil != err {
+		log.Printf("download image [%s] failed: %s", src, err)
+		return src
+	}
+	defer resp.Body.Close()
+	data, err := ioutil.ReadAll(resp.Body)
+	file, err := ioutil.TempFile("", "lute-pdf.img.")
+	if nil != err {
+		log.Printf("create temp image [%s] failed: %s", src, err)
+		return src
+	}
+	_, err = file.Write(data)
+	if nil != err {
+		log.Printf("write temp image [%s] failed: %s", src, err)
+		return src
+	}
+	file.Close()
+	return file.Name()
+}
 func (r *PdfRenderer) getImgSize(imgPath string) (width, height float64) {
 	file, err := os.Open(imgPath)
 	if nil != err {
