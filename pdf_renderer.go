@@ -144,10 +144,10 @@ func NewPdfRenderer(tree *parse.Tree) *PdfRenderer {
 		log.Fatal(err)
 	}
 
-	err = pdf.AddTTFFont("emoji", "fonts/seguiemj.ttf")
-	if err != nil {
-		log.Fatal(err)
-	}
+	//err = pdf.AddTTFFont("emoji", "fonts/seguiemj.ttf")
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
 
 	ret.pushFont(&Font{"msyh", "R", ret.fontSize})
 	pdf.SetMargins(ret.margin, ret.margin, ret.margin, ret.margin)
@@ -374,7 +374,6 @@ func (r *PdfRenderer) renderEmojiAlias(node *ast.Node, entering bool) ast.WalkSt
 }
 
 func (r *PdfRenderer) renderEmojiImg(node *ast.Node, entering bool) ast.WalkStatus {
-	// TODO: r.Write(node.Tokens)
 	return ast.WalkStop
 }
 
@@ -386,7 +385,8 @@ func (r *PdfRenderer) renderEmojiUnicode(node *ast.Node, entering bool) ast.Walk
 }
 
 func (r *PdfRenderer) renderEmoji(node *ast.Node, entering bool) ast.WalkStatus {
-	return ast.WalkContinue
+	// 暂不渲染 Emoji，字体似乎有问题
+	return ast.WalkStop
 }
 
 func (r *PdfRenderer) renderInlineMathCloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
@@ -857,7 +857,6 @@ func (r *PdfRenderer) pushFont(font *Font) {
 func (r *PdfRenderer) popFont() *Font {
 	ret := r.fonts[len(r.fonts)-1]
 	r.fonts = r.fonts[:len(r.fonts)-1]
-	latestFont = r.fonts[len(r.fonts)-1]
 	return ret
 }
 
@@ -897,6 +896,7 @@ func (r *PdfRenderer) WriteString(content string) {
 		font := r.peekFont()
 		if latestFont != font {
 			r.pdf.SetFont(font.family, font.style, font.size)
+			latestFont = font
 		}
 		for i, c := range runes {
 			if r.pdf.GetY() > r.pageSize.H-r.margin*2 {
@@ -1025,13 +1025,14 @@ func (r *PdfRenderer) addPage() {
 
 func (r *PdfRenderer) renderFooter() {
 	footer := r.LinkLabel + r.Link
-	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, 10)
+	r.pdf.SetFont("msyh", "R", 10)
 	width, _ := r.pdf.MeasureTextWidth(footer)
 	x := r.pageSize.W - r.margin - width
 	r.pdf.SetX(x)
 	r.pdf.SetY(r.pageSize.H - r.margin)
 	r.pdf.Cell(nil, footer)
-	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, r.fontSize)
+	font := r.peekFont()
+	r.pdf.SetFont(font.family, font.style, font.size)
 }
 
 type Font struct {
