@@ -25,6 +25,9 @@ func main() {
 	}
 
 	markdown = bytes.ReplaceAll(markdown, []byte("\t"), []byte("    "))
+	for emojiUnicode, emojiAlias := range options.EmojiAlias {
+		markdown = bytes.ReplaceAll(markdown, []byte(emojiUnicode), []byte(":"+emojiAlias+":"))
+	}
 
 	tree, err := parse.Parse("sample", markdown, options)
 	if nil != err {

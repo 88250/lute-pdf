@@ -72,7 +72,12 @@ func NewPdfRenderer(tree *parse.Tree) render.Renderer {
 		log.Fatal(err)
 	}
 
-	pdf.SetFontWithStyle("msyh", gopdf.Regular, int(ret.fontSize))
+	err = pdf.AddTTFFont("emoji", "fonts/seguiemj.ttf")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	pdf.SetFontWithStyle("msyh", gopdf.Regular, ret.fontSize)
 	pdf.SetMargins(ret.margin, ret.margin, ret.margin, ret.margin)
 
 	ret.RendererFuncs[ast.NodeDocument] = ret.renderDocument
@@ -289,6 +294,11 @@ func (r *PdfRenderer) renderCodeBlockOpenMarker(node *ast.Node, entering bool) a
 }
 
 func (r *PdfRenderer) renderEmojiAlias(node *ast.Node, entering bool) ast.WalkStatus {
+	r.pdf.SetFontWithStyle("emoji", gopdf.Regular, r.fontSize)
+	alias := node.Tokens[1 : len(node.Tokens)-1]
+	emojiUnicode := r.Option.AliasEmoji[string(alias)]
+	r.WriteString(emojiUnicode)
+	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, r.fontSize)
 	return ast.WalkStop
 }
 
@@ -298,13 +308,14 @@ func (r *PdfRenderer) renderEmojiImg(node *ast.Node, entering bool) ast.WalkStat
 }
 
 func (r *PdfRenderer) renderEmojiUnicode(node *ast.Node, entering bool) ast.WalkStatus {
-	// TODO: r.Write(node.Tokens)
+	r.pdf.SetFontWithStyle("emoji", gopdf.Regular, r.fontSize)
+	r.Write(node.Tokens)
+	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, r.fontSize)
 	return ast.WalkStop
 }
 
 func (r *PdfRenderer) renderEmoji(node *ast.Node, entering bool) ast.WalkStatus {
-	// TODO: Render Emoji
-	return ast.WalkStop
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderInlineMathCloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
