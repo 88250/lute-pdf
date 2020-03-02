@@ -35,6 +35,22 @@ func main() {
 	italicFontPath := "D:/88250/lute-pdf/fonts/msyhl.ttf"
 	savePath := "D:/88250/lute-pdf/sample.pdf"
 
+	coverTitle := "Lute PDF - Markdown 生成 PDF"
+	coverAuthorLabel := "　　作者："
+	coverAuthor := "88250"
+	coverAuthorLink := "https://hacpai.com/member/88250"
+	coverLinkLabel := "原文链接："
+	coverLink := "https://github.com/88250/lute-pdf"
+	coverSourceLabel := "来源网站："
+	coverSource := "GitHub"
+	coverSourceLink := "https://github.com"
+	coverLicenseLabel := "许可协议："
+	coverLicense := "署名-相同方式共享 4.0 国际 (CC BY-SA 4.0)"
+	coverLicenseLink := "https://creativecommons.org/licenses/by-sa/4.0/"
+	coverLogoImgPath := "https://static.b3log.org/images/brand/b3log-128.png"
+	coverLogoTitle := "B3log 开源"
+	coverLogoTitleLink := "https://b3log.org"
+
 	markdown, err := ioutil.ReadFile(mdPath)
 	if nil != err {
 		log.Fatal(err)
@@ -51,23 +67,22 @@ func main() {
 	}
 
 	renderer := NewPdfRenderer(tree, regularFontPath, boldFontPath, italicFontPath)
-
 	renderer.Cover = &PdfCover{
-		Title:         "Lute PDF - Markdown 生成 PDF",
-		AuthorLabel:   "　　作者：",
-		Author:        "88250",
-		AuthorLink:    "https://hacpai.com/member/88250",
-		LinkLabel:     "原文链接：",
-		Link:          "https://github.com/88250/lute-pdf",
-		SourceLabel:   "来源网站：",
-		Source:        "GitHub",
-		SourceLink:    "https://github.com",
-		LicenseLabel:  "许可协议：",
-		License:       "署名-相同方式共享 4.0 国际 (CC BY-SA 4.0)",
-		LicenseLink:   "https://creativecommons.org/licenses/by-sa/4.0/",
-		LogoImgPath:   "https://static.b3log.org/images/brand/b3log-128.png",
-		LogoTitle:     "B3log 开源",
-		LogoTitleLink: "https://b3log.org",
+		Title:         coverTitle,
+		AuthorLabel:   coverAuthorLabel,
+		Author:        coverAuthor,
+		AuthorLink:    coverAuthorLink,
+		LinkLabel:     coverLinkLabel,
+		Link:          coverLink,
+		SourceLabel:   coverSourceLabel,
+		Source:        coverSource,
+		SourceLink:    coverSourceLink,
+		LicenseLabel:  coverLicenseLabel,
+		License:       coverLicense,
+		LicenseLink:   coverLicenseLink,
+		LogoImgPath:   coverLogoImgPath,
+		LogoTitle:     coverLogoTitle,
+		LogoTitleLink: coverLogoTitleLink,
 	}
 	renderer.RenderCover()
 
