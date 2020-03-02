@@ -15,7 +15,6 @@ import (
 	"io/ioutil"
 	"log"
 
-	"github.com/88250/lute-pdf"
 	"github.com/88250/lute/parse"
 )
 
@@ -30,7 +29,13 @@ func main() {
 	}
 	options.AliasEmoji, options.EmojiAlias = parse.NewEmojis()
 
-	markdown, err := ioutil.ReadFile("D:/88250/lute-pdf/sample/sample.md")
+	mdPath := "D:/88250/lute-pdf/sample.md"
+	regularFontPath := "D:/88250/lute-pdf/fonts/msyh.ttf"
+	boldFontPath := "D:/88250/lute-pdf/fonts/msyhb.ttf"
+	italicFontPath := "D:/88250/lute-pdf/fonts/msyhl.ttf"
+	savePath := "D:/88250/lute-pdf/sample.pdf"
+
+	markdown, err := ioutil.ReadFile(mdPath)
 	if nil != err {
 		log.Fatal(err)
 	}
@@ -40,17 +45,14 @@ func main() {
 		markdown = bytes.ReplaceAll(markdown, []byte(emojiUnicode), []byte(":"+emojiAlias+":"))
 	}
 
-	tree, err := parse.Parse("sample", markdown, options)
+	tree, err := parse.Parse("", markdown, options)
 	if nil != err {
 		log.Fatal(err)
 	}
 
-	renderer := lp.NewPdfRenderer(tree,
-		"D:/88250/lute-pdf/sample/fonts/msyh.ttf",
-		"D:/88250/lute-pdf/sample/fonts/msyhb.ttf",
-		"D:/88250/lute-pdf/sample/fonts/msyhl.ttf")
+	renderer := NewPdfRenderer(tree, regularFontPath, boldFontPath, italicFontPath)
 
-	renderer.Cover = &lp.PdfCover{
+	renderer.Cover = &PdfCover{
 		Title:         "Lute PDF - Markdown 生成 PDF",
 		AuthorLabel:   "　　作者：",
 		Author:        "88250",
@@ -74,7 +76,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	renderer.Save("D:/88250/lute-pdf/sample/sample.pdf")
+	renderer.Save(savePath)
 
 	log.Println("completed")
 }
