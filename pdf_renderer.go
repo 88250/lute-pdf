@@ -77,10 +77,11 @@ type PdfCover struct {
 func (r *PdfRenderer) renderCover() {
 	r.pdf.AddPage()
 
-	imgW, imgH := r.getImgSize(r.Cover.LogoImgPath)
+	logoImgPath := r.downloadImg(r.Cover.LogoImgPath)
+	imgW, imgH := r.getImgSize(logoImgPath)
 	x := (r.pageSize.W-r.margin*2)/2 - imgW/2
 	y := r.pageSize.H/2 - r.margin - 224
-	r.pdf.Image(r.Cover.LogoImgPath, x, y, nil)
+	r.pdf.Image(logoImgPath, x, y, nil)
 	r.pdf.SetY(y)
 	r.pdf.Br(imgH + 6)
 	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, 20)

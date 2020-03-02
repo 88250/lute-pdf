@@ -46,21 +46,21 @@ func main() {
 	renderer := NewPdfRenderer(tree)
 
 	renderer.Cover = &PdfCover{
-		Title:         "Markdown 使用指南 - 基础语法",
+		Title:         "Lute PDF - Markdown 生成 PDF",
 		AuthorLabel:   "　　作者：",
 		Author:        "88250",
 		AuthorLink:    "https://hacpai.com/member/88250",
 		LinkLabel:     "原文链接：",
-		Link:          "https://hacpai.com/article/1583129520165",
+		Link:          "https://github.com/88250/lute-pdf",
 		SourceLabel:   "来源网站：",
-		Source:        "黑客派",
-		SourceLink:    "https://hacpai.com",
+		Source:        "GitHub",
+		SourceLink:    "https://github.com",
 		LicenseLabel:  "许可协议：",
 		License:       "署名-相同方式共享 4.0 国际 (CC BY-SA 4.0)",
 		LicenseLink:   "https://creativecommons.org/licenses/by-sa/4.0/",
-		LogoImgPath:   "hacpai-128.png",
-		LogoTitle:     "黑客派优选帖",
-		LogoTitleLink: "https://hacpai.com/recent/perfect",
+		LogoImgPath:   "https://static.b3log.org/images/brand/b3log-128.png",
+		LogoTitle:     "B3log 开源",
+		LogoTitleLink: "https://b3log.org",
 	}
 	renderer.renderCover()
 
@@ -68,4 +68,5 @@ func main() {
 	if nil != err {
 		log.Fatal(err)
 	}
+	log.Println("completed")
 }
