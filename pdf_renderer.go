@@ -374,7 +374,8 @@ func (r *PdfRenderer) renderTableCell(node *ast.Node, entering bool) ast.WalkSta
 			x += maxWidth - prevWidth
 			r.pdf.SetX(x)
 		}
-		r.pdf.RectFromUpperLeftWithStyle(x, r.pdf.GetY(), maxWidth, r.lineHeight, "D")
+		// TODO: table border
+		// r.pdf.RectFromUpperLeftWithStyle(x, r.pdf.GetY(), maxWidth, r.lineHeight, "D")
 		r.pdf.SetX(r.pdf.GetX() + 4)
 		r.pdf.SetY(r.pdf.GetY() + 4)
 	} else {
@@ -550,13 +551,23 @@ func (r *PdfRenderer) renderDocument(node *ast.Node, entering bool) ast.WalkStat
 }
 
 func (r *PdfRenderer) renderParagraph(node *ast.Node, entering bool) ast.WalkStatus {
-	if grandparent := node.Parent.Parent; nil != grandparent && ast.NodeList == grandparent.Type && grandparent.Tight { // List.ListItem.Paragraph
+	inList := false
+	grandparent := node.Parent.Parent
+	inTightList := false
+	if nil != grandparent && ast.NodeList == grandparent.Type {
+		inList = true
+		inTightList = grandparent.Tight
+	}
+
+	if inTightList { // List.ListItem.Paragraph
 		return ast.WalkContinue
 	}
 
 	if entering {
-		r.Newline()
-		r.pdf.SetY(r.pdf.GetY() + 6)
+		if !inList {
+			r.Newline()
+			r.pdf.SetY(r.pdf.GetY() + 6)
+		}
 	} else {
 		r.Newline()
 	}
@@ -806,11 +817,24 @@ func (r *PdfRenderer) WriteString(content string) {
 	if length := len(content); 0 < length {
 		buf := bytes.Buffer{}
 		x := r.pdf.GetX()
+		startX := x
 		runes := []rune(content)
 		pageRight := r.pageSize.W - r.margin*2
 		for i, c := range runes {
 			if r.pdf.GetY() > r.pageSize.H-r.margin*2 {
 				r.pdf.AddPage()
+			}
+
+			if '\n' == c {
+				if 0 < buf.Len() {
+					r.pdf.Cell(nil, buf.String())
+					buf.Reset()
+				}
+
+				r.pdf.Br(float64(r.fontSize) + 2)
+				r.pdf.SetX(startX)
+				x = startX
+				continue
 			}
 
 			width, _ := r.pdf.MeasureTextWidth(string(c))
@@ -861,7 +885,13 @@ func (r *PdfRenderer) downloadImg(src string) (localPath string) {
 	}
 
 	client := http.Client{}
-	resp, err := client.Get(src)
+	req := &http.Request{
+		Header: http.Header{
+			"User-Agent": []string{"Lute-PDF"},
+		},
+		URL:u,
+	}
+	resp, err := client.Do(req)
 	if nil != err {
 		log.Printf("download image [%s] failed: %s", src, err)
 		return src
