@@ -634,6 +634,7 @@ func (r *PdfRenderer) renderInlineHTML(node *ast.Node, entering bool) ast.WalkSt
 
 func (r *PdfRenderer) renderDocument(node *ast.Node, entering bool) ast.WalkStatus {
 	if !entering {
+		r.renderFooter()
 		if err := r.pdf.WritePdf(r.Tree.Name + ".pdf"); nil != err {
 			log.Fatal(err)
 		}
