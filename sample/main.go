@@ -15,6 +15,7 @@ import (
 	"io/ioutil"
 	"log"
 
+	"github.com/88250/lute-pdf"
 	"github.com/88250/lute/parse"
 )
 
@@ -29,7 +30,7 @@ func main() {
 	}
 	options.AliasEmoji, options.EmojiAlias = parse.NewEmojis()
 
-	markdown, err := ioutil.ReadFile("sample.md")
+	markdown, err := ioutil.ReadFile("D:/88250/lute-pdf/sample/sample.md")
 	if nil != err {
 		log.Fatal(err)
 	}
@@ -43,9 +44,13 @@ func main() {
 	if nil != err {
 		log.Fatal(err)
 	}
-	renderer := NewPdfRenderer(tree)
 
-	renderer.Cover = &PdfCover{
+	renderer := lp.NewPdfRenderer(tree,
+		"D:/88250/lute-pdf/sample/fonts/msyh.ttf",
+		"D:/88250/lute-pdf/sample/fonts/msyhb.ttf",
+		"D:/88250/lute-pdf/sample/fonts/msyhl.ttf")
+
+	renderer.Cover = &lp.PdfCover{
 		Title:         "Lute PDF - Markdown 生成 PDF",
 		AuthorLabel:   "　　作者：",
 		Author:        "88250",
@@ -68,5 +73,8 @@ func main() {
 	if nil != err {
 		log.Fatal(err)
 	}
+
+	renderer.Save("D:/88250/lute-pdf/sample/sample.pdf")
+
 	log.Println("completed")
 }

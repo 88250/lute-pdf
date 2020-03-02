@@ -8,7 +8,7 @@
 // THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 // See the Mulan PSL v2 for more details.
 
-package main
+package lp
 
 import (
 	"bytes"
@@ -37,7 +37,11 @@ type PdfRenderer struct {
 	needRenderFootnotesDef bool
 	headingCnt             int
 
-	Cover        *PdfCover    // 封面
+	Cover       *PdfCover // 封面
+	RegularFont string    // 正常字体文件路径
+	BoldFont    string    // 粗体字体文件路径
+	ItalicFont  string    // 斜体字体文件路径
+
 	pdf          *gopdf.GoPdf // PDF 生成器句柄
 	pageSize     *gopdf.Rect  // 页面大小
 	zoom         float64      // 字体、行高大小倍数
@@ -84,7 +88,7 @@ func (r *PdfRenderer) RenderCover() {
 	r.pdf.Image(logoImgPath, x, y, nil)
 	r.pdf.SetY(y)
 	r.pdf.Br(imgH + 10)
-	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, 20)
+	r.pdf.SetFontWithStyle("regular", gopdf.Regular, 20)
 	width, _ := r.pdf.MeasureTextWidth(r.Cover.LogoTitle)
 	x = (r.pageSize.W)/2 - width/2
 	r.pdf.SetX(x)
@@ -93,7 +97,7 @@ func (r *PdfRenderer) RenderCover() {
 	r.pdf.AddExternalLink(r.Cover.LogoTitleLink, x, y, width, 20)
 	r.pdf.Br(48)
 
-	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, 28)
+	r.pdf.SetFontWithStyle("regular", gopdf.Regular, 28)
 	lines, _ := r.pdf.SplitText(r.Cover.Title, r.pageSize.W-r.margin)
 	for _, line := range lines {
 		width, _ := r.pdf.MeasureTextWidth(line)
@@ -106,7 +110,7 @@ func (r *PdfRenderer) RenderCover() {
 	fontSize := 12
 	r.pdf.Br(45)
 	r.pdf.SetX(r.margin)
-	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, fontSize)
+	r.pdf.SetFontWithStyle("regular", gopdf.Regular, fontSize)
 	r.pdf.Cell(nil, r.Cover.AuthorLabel)
 	x = r.pdf.GetX()
 	width, _ = r.pdf.MeasureTextWidth(r.Cover.Author)
@@ -147,7 +151,7 @@ func (r *PdfRenderer) RenderCover() {
 }
 
 // NewPdfRenderer 创建一个 HTML 渲染器。
-func NewPdfRenderer(tree *parse.Tree) *PdfRenderer {
+func NewPdfRenderer(tree *parse.Tree, regularFont, boldFont, italicFont string) *PdfRenderer {
 	pdf := &gopdf.GoPdf{}
 
 	ret := &PdfRenderer{BaseRenderer: render.NewBaseRenderer(tree), needRenderFootnotesDef: false, headingCnt: 0, pdf: pdf}
@@ -162,16 +166,25 @@ func NewPdfRenderer(tree *parse.Tree) *PdfRenderer {
 	ret.heading6Size = 14 * ret.zoom
 	ret.margin = 60 * ret.zoom
 
+	ret.RegularFont = regularFont
+	ret.BoldFont = boldFont
+	ret.ItalicFont = italicFont
+
 	ret.pageSize = gopdf.PageSizeA4
 	pdf.Start(gopdf.Config{PageSize: *ret.pageSize})
 
 	var err error
-	err = pdf.AddTTFFont("msyh", "fonts/msyh.ttf")
+	err = pdf.AddTTFFont("regular", ret.RegularFont)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = pdf.AddTTFFontWithOption("msyhb", "fonts/msyhb.ttf", gopdf.TtfOption{Style: gopdf.Bold})
+	err = pdf.AddTTFFontWithOption("bold", ret.BoldFont, gopdf.TtfOption{Style: gopdf.Bold})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = pdf.AddTTFFontWithOption("italic", ret.ItalicFont, gopdf.TtfOption{Style: gopdf.Italic})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -181,7 +194,7 @@ func NewPdfRenderer(tree *parse.Tree) *PdfRenderer {
 	//	log.Fatal(err)
 	//}
 
-	ret.pushFont(&Font{"msyh", "R", ret.fontSize})
+	ret.pushFont(&Font{"regular", "R", ret.fontSize})
 	ret.pushTextColor(&RGB{0, 0, 0})
 	pdf.SetMargins(ret.margin, ret.margin, ret.margin, ret.margin)
 
@@ -316,7 +329,7 @@ func (r *PdfRenderer) RenderFootnotesDefs(context *parse.Context) []byte {
 		tree.Context.Tree = tree
 		tree.Root = &ast.Node{Type: ast.NodeDocument}
 		tree.Root.AppendChild(def)
-		defRenderer := NewPdfRenderer(tree)
+		defRenderer := NewPdfRenderer(tree, r.RegularFont, r.BoldFont, r.ItalicFont)
 		lc := tree.Root.LastDeepestChild()
 		for i = len(def.FootnotesRefs) - 1; 0 <= i; i-- {
 			ref := def.FootnotesRefs[i]
@@ -504,7 +517,7 @@ func (r *PdfRenderer) renderTableRow(node *ast.Node, entering bool) ast.WalkStat
 
 func (r *PdfRenderer) renderTableHead(node *ast.Node, entering bool) ast.WalkStatus {
 	if entering {
-		r.pushFont(&Font{"msyhb", "B", r.fontSize})
+		r.pushFont(&Font{"bold", "B", r.fontSize})
 	} else {
 		r.popFont()
 	}
@@ -647,14 +660,17 @@ func (r *PdfRenderer) renderInlineHTML(node *ast.Node, entering bool) ast.WalkSt
 func (r *PdfRenderer) renderDocument(node *ast.Node, entering bool) ast.WalkStatus {
 	if !entering {
 		r.renderFooter()
-		if err := r.pdf.WritePdf(r.Tree.Name + ".pdf"); nil != err {
-			log.Fatal(err)
-		}
-		if err := r.pdf.Close(); nil != err {
-			log.Fatal(err)
-		}
 	}
 	return ast.WalkContinue
+}
+
+func (r *PdfRenderer) Save(pdfPath string) {
+	if err := r.pdf.WritePdf(pdfPath); nil != err {
+		log.Fatal(err)
+	}
+	if err := r.pdf.Close(); nil != err {
+		log.Fatal(err)
+	}
 }
 
 func (r *PdfRenderer) renderParagraph(node *ast.Node, entering bool) ast.WalkStatus {
@@ -709,7 +725,7 @@ func (r *PdfRenderer) renderEmphasis(node *ast.Node, entering bool) ast.WalkStat
 }
 
 func (r *PdfRenderer) renderEmAsteriskOpenMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pushFont(&Font{"msyh", "I", r.fontSize})
+	r.pushFont(&Font{"italic", "I", r.fontSize})
 	return ast.WalkStop
 }
 
@@ -719,7 +735,7 @@ func (r *PdfRenderer) renderEmAsteriskCloseMarker(node *ast.Node, entering bool)
 }
 
 func (r *PdfRenderer) renderEmUnderscoreOpenMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pushFont(&Font{"msyh", "I", r.fontSize})
+	r.pushFont(&Font{"italic", "I", r.fontSize})
 	return ast.WalkStop
 }
 
@@ -733,7 +749,7 @@ func (r *PdfRenderer) renderStrong(node *ast.Node, entering bool) ast.WalkStatus
 }
 
 func (r *PdfRenderer) renderStrongA6kOpenMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pushFont(&Font{"msyhb", "B", r.fontSize})
+	r.pushFont(&Font{"bold", "B", r.fontSize})
 	return ast.WalkStop
 }
 
@@ -743,7 +759,7 @@ func (r *PdfRenderer) renderStrongA6kCloseMarker(node *ast.Node, entering bool) 
 }
 
 func (r *PdfRenderer) renderStrongU8eOpenMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pushFont(&Font{"msyhb", "B", r.fontSize})
+	r.pushFont(&Font{"bold", "B", r.fontSize})
 	return ast.WalkStop
 }
 
@@ -791,7 +807,7 @@ func (r *PdfRenderer) renderHeading(node *ast.Node, entering bool) ast.WalkStatu
 		default:
 			headingSize = float64(r.fontSize)
 		}
-		r.pushFont(&Font{"msyhb", "B", int(math.Round(headingSize))})
+		r.pushFont(&Font{"bold", "B", int(math.Round(headingSize))})
 	} else {
 		r.popFont()
 		r.pdf.SetY(r.pdf.GetY() + 6)
@@ -1076,7 +1092,7 @@ func (r *PdfRenderer) addPage() {
 
 func (r *PdfRenderer) renderFooter() {
 	footer := r.Cover.LinkLabel + r.Cover.Link
-	r.pdf.SetFont("msyh", "R", 8)
+	r.pdf.SetFont("regular", "R", 8)
 	r.pdf.SetTextColor(0, 0, 0)
 	width, _ := r.pdf.MeasureTextWidth(footer)
 	x := r.pageSize.W - r.margin - width
