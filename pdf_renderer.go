@@ -42,6 +42,7 @@ type PdfRenderer struct {
 	margin       float64      // 页边距
 	x            []float64    // 当前横坐标栈
 	fonts        []*Font      // 当前字体栈
+	textColors   []*RGB       // 当前文本颜色栈
 }
 
 // PdfCover 描述了 PDF 封面。
@@ -72,15 +73,16 @@ func (r *PdfRenderer) renderCover() {
 		r.pdf.Br(30)
 	}
 
+	fontSize := 12
 	r.pdf.Br(45)
 	r.pdf.SetX(r.margin)
-	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, 16)
+	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, fontSize)
 	r.pdf.Cell(nil, r.AuthorLabel)
 	x := r.pdf.GetX()
 	width, _ := r.pdf.MeasureTextWidth(r.Author)
 	r.pdf.SetTextColor(66, 133, 244)
 	r.pdf.Cell(nil, r.Author)
-	r.pdf.AddExternalLink(r.AuthorLink, x, r.pdf.GetY(), width, 16)
+	r.pdf.AddExternalLink(r.AuthorLink, x, r.pdf.GetY(), width, float64(fontSize))
 	r.pdf.SetTextColor(0, 0, 0)
 	r.pdf.Br(22)
 
@@ -89,7 +91,7 @@ func (r *PdfRenderer) renderCover() {
 	width, _ = r.pdf.MeasureTextWidth(r.Link)
 	r.pdf.SetTextColor(66, 133, 244)
 	r.pdf.Cell(nil, r.Link)
-	r.pdf.AddExternalLink(r.Link, x, r.pdf.GetY(), width, 16)
+	r.pdf.AddExternalLink(r.Link, x, r.pdf.GetY(), width, float64(fontSize))
 	r.pdf.SetTextColor(0, 0, 0)
 	r.pdf.Br(22)
 
@@ -98,7 +100,7 @@ func (r *PdfRenderer) renderCover() {
 	width, _ = r.pdf.MeasureTextWidth(r.Source)
 	r.pdf.SetTextColor(66, 133, 244)
 	r.pdf.Cell(nil, r.Source)
-	r.pdf.AddExternalLink(r.SourceLink, x, r.pdf.GetY(), width, 16)
+	r.pdf.AddExternalLink(r.SourceLink, x, r.pdf.GetY(), width, float64(fontSize))
 	r.pdf.SetTextColor(0, 0, 0)
 	r.pdf.Br(22)
 
@@ -107,7 +109,7 @@ func (r *PdfRenderer) renderCover() {
 	width, _ = r.pdf.MeasureTextWidth(r.License)
 	r.pdf.SetTextColor(66, 133, 244)
 	r.pdf.Cell(nil, r.License)
-	r.pdf.AddExternalLink(r.LicenseLink, x, r.pdf.GetY(), width, 16)
+	r.pdf.AddExternalLink(r.LicenseLink, x, r.pdf.GetY(), width,  float64(fontSize))
 	r.pdf.SetTextColor(0, 0, 0)
 	r.pdf.Br(20)
 
@@ -150,6 +152,7 @@ func NewPdfRenderer(tree *parse.Tree) *PdfRenderer {
 	//}
 
 	ret.pushFont(&Font{"msyh", "R", ret.fontSize})
+	ret.pushTextColor(&RGB{0, 0, 0})
 	pdf.SetMargins(ret.margin, ret.margin, ret.margin, ret.margin)
 
 	ret.RendererFuncs[ast.NodeDocument] = ret.renderDocument
@@ -340,17 +343,17 @@ func (r *PdfRenderer) renderCodeBlockCode(node *ast.Node, entering bool) ast.Wal
 func (r *PdfRenderer) renderCodeBlockLike(content []byte) {
 	r.Newline()
 	r.pdf.SetY(r.pdf.GetY() + 6)
-	r.pdf.SetTextColor(86, 158, 61)
+	r.pushTextColor(&RGB{86, 158, 61})
 	r.WriteString(util.BytesToStr(content))
-	r.pdf.SetTextColor(0, 0, 0)
+	r.popTextColor()
 	r.pdf.SetY(r.pdf.GetY() + 6)
 	r.Newline()
 }
 
 func (r *PdfRenderer) renderCodeSpanLike(content []byte) {
-	r.pdf.SetTextColor(255, 153, 51)
+	r.pushTextColor(&RGB{255, 153, 51})
 	r.WriteString(util.BytesToStr(content))
-	r.pdf.SetTextColor(0, 0, 0)
+	r.popTextColor()
 }
 
 func (r *PdfRenderer) renderCodeBlockCloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
@@ -588,7 +591,7 @@ func (r *PdfRenderer) renderImage(node *ast.Node, entering bool) ast.WalkStatus 
 func (r *PdfRenderer) renderLink(node *ast.Node, entering bool) ast.WalkStatus {
 	if entering {
 		r.pushX(r.pdf.GetX())
-		r.pdf.SetTextColor(66, 133, 244)
+		r.pushTextColor(&RGB{66, 133, 244})
 	} else {
 		x := r.popX()
 		width := r.pdf.GetX() - x
@@ -596,7 +599,7 @@ func (r *PdfRenderer) renderLink(node *ast.Node, entering bool) ast.WalkStatus {
 		destTokens := dest.Tokens
 		destTokens = r.Tree.Context.RelativePath(destTokens)
 		r.pdf.AddExternalLink(util.BytesToStr(destTokens), x, r.pdf.GetY(), width, r.lineHeight)
-		r.pdf.SetTextColor(0, 0, 0)
+		r.popTextColor()
 	}
 	return ast.WalkContinue
 }
@@ -721,12 +724,12 @@ func (r *PdfRenderer) renderStrongU8eCloseMarker(node *ast.Node, entering bool) 
 func (r *PdfRenderer) renderBlockquote(node *ast.Node, entering bool) ast.WalkStatus {
 	if entering {
 		r.Newline()
-		r.pdf.SetTextColor(106, 115, 125)
+		r.pushTextColor(&RGB{106, 115, 125})
 		r.pushX(r.pdf.GetX())
 	} else {
 		x := r.popX()
 		r.pdf.SetX(r.pdf.GetX() - x + r.margin)
-		r.pdf.SetTextColor(0, 0, 0)
+		r.popTextColor()
 		r.Newline()
 	}
 	return ast.WalkContinue
@@ -864,6 +867,20 @@ func (r *PdfRenderer) peekFont() *Font {
 	return r.fonts[len(r.fonts)-1]
 }
 
+func (r *PdfRenderer) pushTextColor(textColor *RGB) {
+	r.textColors = append(r.textColors, textColor)
+}
+
+func (r *PdfRenderer) popTextColor() *RGB {
+	ret := r.textColors[len(r.textColors)-1]
+	r.textColors = r.textColors[:len(r.textColors)-1]
+	return ret
+}
+
+func (r *PdfRenderer) peekTextColor() *RGB {
+	return r.textColors[len(r.textColors)-1]
+}
+
 func (r *PdfRenderer) countParentContainerBlocks(n *ast.Node) (ret int) {
 	for parent := n.Parent; nil != parent; parent = parent.Parent {
 		if ast.NodeBlockquote == parent.Type || ast.NodeList == parent.Type {
@@ -898,6 +915,11 @@ func (r *PdfRenderer) WriteString(content string) {
 			r.pdf.SetFont(font.family, font.style, font.size)
 			latestFont = font
 		}
+		textColor := r.peekTextColor()
+		if nil != textColor {
+			r.pdf.SetTextColor(textColor.R, textColor.G, textColor.B)
+		}
+
 		for i, c := range runes {
 			if r.pdf.GetY() > r.pageSize.H-r.margin*2 {
 				r.addPage()
@@ -1026,6 +1048,7 @@ func (r *PdfRenderer) addPage() {
 func (r *PdfRenderer) renderFooter() {
 	footer := r.LinkLabel + r.Link
 	r.pdf.SetFont("msyh", "R", 10)
+	r.pdf.SetTextColor(0, 0, 0)
 	width, _ := r.pdf.MeasureTextWidth(footer)
 	x := r.pageSize.W - r.margin - width
 	r.pdf.SetX(x)
@@ -1033,10 +1056,16 @@ func (r *PdfRenderer) renderFooter() {
 	r.pdf.Cell(nil, footer)
 	font := r.peekFont()
 	r.pdf.SetFont(font.family, font.style, font.size)
+	textColor := r.peekTextColor()
+	r.pdf.SetTextColor(textColor.R, textColor.G, textColor.B)
 }
 
 type Font struct {
 	family string
 	style  string // R|B|I|U
 	size   int
+}
+
+type RGB struct {
+	R, G, B uint8
 }
