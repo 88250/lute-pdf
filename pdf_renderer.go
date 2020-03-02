@@ -794,6 +794,7 @@ func (r *PdfRenderer) renderHeading(node *ast.Node, entering bool) ast.WalkStatu
 		r.pushFont(&Font{"msyhb", "B", int(math.Round(headingSize))})
 	} else {
 		r.popFont()
+		r.pdf.SetY(r.pdf.GetY() + 6)
 		r.Newline()
 	}
 	return ast.WalkContinue
