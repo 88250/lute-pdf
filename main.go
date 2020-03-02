@@ -12,6 +12,7 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"io/ioutil"
 	"log"
 
@@ -19,18 +20,14 @@ import (
 )
 
 func main() {
-	options := &parse.Options{
-		GFMTable:            true,
-		GFMTaskListItem:     true,
-		GFMStrikethrough:    true,
-		GFMAutoLink:         true,
-		SoftBreak2HardBreak: true,
-		Emoji:               true,
-	}
-	options.AliasEmoji, options.EmojiAlias = parse.NewEmojis()
+	argMdPath := flag.String("mdPath", "D:/88250/lute-pdf/sample.md", "Markdown 文件路径")
+	argRegularFontPath := flag.String("regularFontPath", "D:/88250/lute-pdf/fonts/msyh.ttf", "正常字体文件路径")
 
-	mdPath := "D:/88250/lute-pdf/sample.md"
-	regularFontPath := "D:/88250/lute-pdf/fonts/msyh.ttf"
+
+	flag.Parse()
+
+	mdPath := *argMdPath
+	regularFontPath := *argRegularFontPath
 	boldFontPath := "D:/88250/lute-pdf/fonts/msyhb.ttf"
 	italicFontPath := "D:/88250/lute-pdf/fonts/msyhl.ttf"
 	savePath := "D:/88250/lute-pdf/sample.pdf"
@@ -50,6 +47,17 @@ func main() {
 	coverLogoImgPath := "https://static.b3log.org/images/brand/b3log-128.png"
 	coverLogoTitle := "B3log 开源"
 	coverLogoTitleLink := "https://b3log.org"
+
+
+	options := &parse.Options{
+		GFMTable:            true,
+		GFMTaskListItem:     true,
+		GFMStrikethrough:    true,
+		GFMAutoLink:         true,
+		SoftBreak2HardBreak: true,
+		Emoji:               true,
+	}
+	options.AliasEmoji, options.EmojiAlias = parse.NewEmojis()
 
 	markdown, err := ioutil.ReadFile(mdPath)
 	if nil != err {
