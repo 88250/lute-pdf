@@ -59,16 +59,34 @@ type PdfCover struct {
 	LicenseLabel string
 	License      string
 	LicenseLink  string
+	LogoImgPath  string
+	LogoTitle    string
 }
 
 func (r *PdfRenderer) renderCover() {
 	r.pdf.AddPage()
 
-	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, 28)
+	imgW, imgH := r.getImgSize(r.LogoImgPath)
+	x := (r.pageSize.W-r.margin*2)/2 - imgW/2
 	y := r.pageSize.H/2 - r.margin - 224
+	r.pdf.Image(r.LogoImgPath, x, y, nil)
 	r.pdf.SetY(y)
+	r.pdf.Br(imgH + 6)
+	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, 20)
+	width, _ := r.pdf.MeasureTextWidth(r.LogoTitle)
+	x = (r.pageSize.W-r.margin*2)/2 - width/2
+	r.pdf.SetX(x)
+	y = r.pdf.GetY()
+	r.pdf.Cell(nil, r.LogoTitle)
+	r.pdf.AddExternalLink("https://hacpai.com/recent/perfect", x, y, width, 20)
+	r.pdf.Br(48)
+
+	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, 28)
 	lines, _ := r.pdf.SplitText(r.PdfCover.Title, r.pageSize.W-r.margin*2)
 	for _, line := range lines {
+		width, _ := r.pdf.MeasureTextWidth(line)
+		x = (r.pageSize.W-r.margin*2)/2 - width/2
+		r.pdf.SetX(x)
 		r.pdf.Cell(nil, line)
 		r.pdf.Br(30)
 	}
@@ -78,8 +96,8 @@ func (r *PdfRenderer) renderCover() {
 	r.pdf.SetX(r.margin)
 	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, fontSize)
 	r.pdf.Cell(nil, r.AuthorLabel)
-	x := r.pdf.GetX()
-	width, _ := r.pdf.MeasureTextWidth(r.Author)
+	x = r.pdf.GetX()
+	width, _ = r.pdf.MeasureTextWidth(r.Author)
 	r.pdf.SetTextColor(66, 133, 244)
 	r.pdf.Cell(nil, r.Author)
 	r.pdf.AddExternalLink(r.AuthorLink, x, r.pdf.GetY(), width, float64(fontSize))
@@ -109,7 +127,7 @@ func (r *PdfRenderer) renderCover() {
 	width, _ = r.pdf.MeasureTextWidth(r.License)
 	r.pdf.SetTextColor(66, 133, 244)
 	r.pdf.Cell(nil, r.License)
-	r.pdf.AddExternalLink(r.LicenseLink, x, r.pdf.GetY(), width,  float64(fontSize))
+	r.pdf.AddExternalLink(r.LicenseLink, x, r.pdf.GetY(), width, float64(fontSize))
 	r.pdf.SetTextColor(0, 0, 0)
 	r.pdf.Br(20)
 
@@ -900,8 +918,6 @@ func (r *PdfRenderer) Write(content []byte) {
 	r.WriteString(util.BytesToStr(content))
 }
 
-var latestFont *Font
-
 // WriteString 输出指定的字符串 content。
 func (r *PdfRenderer) WriteString(content string) {
 	if length := len(content); 0 < length {
@@ -911,9 +927,8 @@ func (r *PdfRenderer) WriteString(content string) {
 		runes := []rune(content)
 		pageRight := r.pageSize.W - r.margin*2
 		font := r.peekFont()
-		if latestFont != font {
+		if nil != font {
 			r.pdf.SetFont(font.family, font.style, font.size)
-			latestFont = font
 		}
 		textColor := r.peekTextColor()
 		if nil != textColor {
@@ -1047,12 +1062,13 @@ func (r *PdfRenderer) addPage() {
 
 func (r *PdfRenderer) renderFooter() {
 	footer := r.LinkLabel + r.Link
-	r.pdf.SetFont("msyh", "R", 10)
+	r.pdf.SetFont("msyh", "R", 8)
 	r.pdf.SetTextColor(0, 0, 0)
 	width, _ := r.pdf.MeasureTextWidth(footer)
 	x := r.pageSize.W - r.margin - width
 	r.pdf.SetX(x)
-	r.pdf.SetY(r.pageSize.H - r.margin)
+	y := r.pageSize.H - r.margin
+	r.pdf.SetY(y)
 	r.pdf.Cell(nil, footer)
 	font := r.peekFont()
 	r.pdf.SetFont(font.family, font.style, font.size)
