@@ -10,9 +10,7 @@ Lute PDF 是一款通过 Markdown 生成 PDF 的小工具。通过 [Lute](https:
 
 ## 📸 截图
 
-Markdown 原文为本 README.md，生成效果：
-
-
+![sample](https://user-images.githubusercontent.com/873584/75688357-519b9c80-5cda-11ea-8eb4-4d201dade233.png)
 
 ## 🐛 已知问题
 
