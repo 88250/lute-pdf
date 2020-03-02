@@ -35,5 +35,5 @@ Lute PDF 使用 [木兰宽松许可证, 第2版](http://license.coscl.org.cn/Mul
 
 ## 🙏 鸣谢
 
-* [对中文语境优化的 Markdown 引擎 Lute](https://github.com/88250/lute)
+* [对中文语境优化的 Markdown 引擎 Lute](https://hacpai.com/article/1567047822949)
 * [Golang 生成 PDF 工具库 gopdf](https://github.com/signintech/gopdf)

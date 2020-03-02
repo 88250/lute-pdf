@@ -79,14 +79,14 @@ func (r *PdfRenderer) renderCover() {
 
 	logoImgPath := r.downloadImg(r.Cover.LogoImgPath)
 	imgW, imgH := r.getImgSize(logoImgPath)
-	x := (r.pageSize.W-r.margin*2)/2 - imgW/2
-	y := r.pageSize.H/2 - r.margin - 224
+	x := (r.pageSize.W)/2 - imgW/2
+	y := r.pageSize.H/2 - r.margin - 128
 	r.pdf.Image(logoImgPath, x, y, nil)
 	r.pdf.SetY(y)
-	r.pdf.Br(imgH + 6)
+	r.pdf.Br(imgH + 10)
 	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, 20)
 	width, _ := r.pdf.MeasureTextWidth(r.Cover.LogoTitle)
-	x = (r.pageSize.W-r.margin*2)/2 - width/2
+	x = (r.pageSize.W)/2 - width/2
 	r.pdf.SetX(x)
 	y = r.pdf.GetY()
 	r.pdf.Cell(nil, r.Cover.LogoTitle)
@@ -94,10 +94,10 @@ func (r *PdfRenderer) renderCover() {
 	r.pdf.Br(48)
 
 	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, 28)
-	lines, _ := r.pdf.SplitText(r.Cover.Title, r.pageSize.W-r.margin*2)
+	lines, _ := r.pdf.SplitText(r.Cover.Title, r.pageSize.W-r.margin)
 	for _, line := range lines {
 		width, _ := r.pdf.MeasureTextWidth(line)
-		x = (r.pageSize.W-r.margin*2)/2 - width/2
+		x = (r.pageSize.W)/2 - width/2
 		r.pdf.SetX(x)
 		r.pdf.Cell(nil, line)
 		r.pdf.Br(30)
@@ -160,7 +160,7 @@ func NewPdfRenderer(tree *parse.Tree) *PdfRenderer {
 	ret.heading4Size = 18 * ret.zoom
 	ret.heading5Size = 16 * ret.zoom
 	ret.heading6Size = 14 * ret.zoom
-	ret.margin = 30 * ret.zoom
+	ret.margin = 60 * ret.zoom
 
 	ret.pageSize = gopdf.PageSizeA4
 	pdf.Start(gopdf.Config{PageSize: *ret.pageSize})
