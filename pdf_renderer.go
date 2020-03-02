@@ -27,9 +27,10 @@ type PdfRenderer struct {
 	needRenderFootnotesDef bool
 	headingCnt             int
 
+	*PdfCover                 // 封面
 	pdf          *gopdf.GoPdf // PDF 生成器句柄
 	pageSize     *gopdf.Rect  // 页面大小
-	factor       float64      // 字体、行高大小倍数
+	zoom         float64      // 字体、行高大小倍数
 	fontSize     int          // 字体大小
 	lineHeight   float64      // 行高
 	heading1Size float64      // 一级标题大小
@@ -40,27 +41,97 @@ type PdfRenderer struct {
 	heading6Size float64      // 六级标题大小
 	margin       float64      // 页边距
 	x            []float64    // 当前横坐标栈
+	fonts        []*Font      // 当前字体栈
+}
+
+// PdfCover 描述了 PDF 封面。
+type PdfCover struct {
+	Title        string
+	AuthorLabel  string
+	Author       string
+	AuthorLink   string
+	LinkLabel    string
+	Link         string
+	SourceLabel  string
+	Source       string
+	SourceLink   string
+	LicenseLabel string
+	License      string
+	LicenseLink  string
+}
+
+func (r *PdfRenderer) renderCover() {
+	r.pdf.AddPage()
+
+	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, 28)
+	y := r.pageSize.H/2 - r.margin - 224
+	r.pdf.SetY(y)
+	lines, _ := r.pdf.SplitText(r.PdfCover.Title, r.pageSize.W-r.margin*2)
+	for _, line := range lines {
+		r.pdf.Cell(nil, line)
+		r.pdf.Br(30)
+	}
+
+	r.pdf.Br(45)
+	r.pdf.SetX(r.margin)
+	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, 16)
+	r.pdf.Cell(nil, r.AuthorLabel)
+	x := r.pdf.GetX()
+	width, _ := r.pdf.MeasureTextWidth(r.Author)
+	r.pdf.SetTextColor(66, 133, 244)
+	r.pdf.Cell(nil, r.Author)
+	r.pdf.AddExternalLink(r.AuthorLink, x, r.pdf.GetY(), width, 16)
+	r.pdf.SetTextColor(0, 0, 0)
+	r.pdf.Br(22)
+
+	r.pdf.Cell(nil, r.LinkLabel)
+	x = r.pdf.GetX()
+	width, _ = r.pdf.MeasureTextWidth(r.Link)
+	r.pdf.SetTextColor(66, 133, 244)
+	r.pdf.Cell(nil, r.Link)
+	r.pdf.AddExternalLink(r.Link, x, r.pdf.GetY(), width, 16)
+	r.pdf.SetTextColor(0, 0, 0)
+	r.pdf.Br(22)
+
+	r.pdf.Cell(nil, r.SourceLabel)
+	x = r.pdf.GetX()
+	width, _ = r.pdf.MeasureTextWidth(r.Source)
+	r.pdf.SetTextColor(66, 133, 244)
+	r.pdf.Cell(nil, r.Source)
+	r.pdf.AddExternalLink(r.SourceLink, x, r.pdf.GetY(), width, 16)
+	r.pdf.SetTextColor(0, 0, 0)
+	r.pdf.Br(22)
+
+	r.pdf.Cell(nil, r.LicenseLabel)
+	x = r.pdf.GetX()
+	width, _ = r.pdf.MeasureTextWidth(r.License)
+	r.pdf.SetTextColor(66, 133, 244)
+	r.pdf.Cell(nil, r.License)
+	r.pdf.AddExternalLink(r.LicenseLink, x, r.pdf.GetY(), width, 16)
+	r.pdf.SetTextColor(0, 0, 0)
+	r.pdf.Br(20)
+
+	r.pdf.AddPage()
 }
 
 // NewPdfRenderer 创建一个 HTML 渲染器。
-func NewPdfRenderer(tree *parse.Tree) render.Renderer {
+func NewPdfRenderer(tree *parse.Tree) *PdfRenderer {
 	pdf := &gopdf.GoPdf{}
 
 	ret := &PdfRenderer{BaseRenderer: render.NewBaseRenderer(tree), needRenderFootnotesDef: false, headingCnt: 0, pdf: pdf}
-	ret.factor = 0.75
-	ret.fontSize = int(math.Floor(14 * ret.factor))
-	ret.lineHeight = 24.0 * ret.factor
-	ret.heading1Size = 24 * ret.factor
-	ret.heading2Size = 22 * ret.factor
-	ret.heading3Size = 20 * ret.factor
-	ret.heading4Size = 18 * ret.factor
-	ret.heading5Size = 16 * ret.factor
-	ret.heading6Size = 14 * ret.factor
-	ret.margin = 30 * ret.factor
+	ret.zoom = 0.75
+	ret.fontSize = int(math.Floor(14 * ret.zoom))
+	ret.lineHeight = 24.0 * ret.zoom
+	ret.heading1Size = 24 * ret.zoom
+	ret.heading2Size = 22 * ret.zoom
+	ret.heading3Size = 20 * ret.zoom
+	ret.heading4Size = 18 * ret.zoom
+	ret.heading5Size = 16 * ret.zoom
+	ret.heading6Size = 14 * ret.zoom
+	ret.margin = 30 * ret.zoom
 
 	ret.pageSize = gopdf.PageSizeA4
 	pdf.Start(gopdf.Config{PageSize: *ret.pageSize})
-	pdf.AddPage()
 
 	var err error
 	err = pdf.AddTTFFont("msyh", "fonts/msyh.ttf")
@@ -220,7 +291,7 @@ func (r *PdfRenderer) RenderFootnotesDefs(context *parse.Context) []byte {
 			link := &ast.Node{Type: ast.NodeInlineHTML, Tokens: util.StrToBytes(gotoRef)}
 			lc.InsertAfter(link)
 		}
-		defRenderer.(*PdfRenderer).needRenderFootnotesDef = true
+		defRenderer.needRenderFootnotesDef = true
 		defContent, err := defRenderer.Render()
 		if nil != err {
 			break
@@ -493,7 +564,7 @@ func (r *PdfRenderer) renderImage(node *ast.Node, entering bool) ast.WalkStatus 
 			_, height := r.getImgSize(src)
 			y := r.pdf.GetY()
 			if math.Ceil(y)+height > math.Floor(r.pageSize.H-r.margin) {
-				r.pdf.AddPage()
+				r.addPage()
 			}
 			r.pdf.Image(src, r.pdf.GetX(), r.pdf.GetY(), nil)
 			r.pdf.SetY(r.pdf.GetY() + height)
@@ -796,6 +867,16 @@ func (r *PdfRenderer) popX() float64 {
 	return ret
 }
 
+func (r *PdfRenderer) pushFont(font *Font) {
+	r.fonts = append(r.fonts, font)
+}
+
+func (r *PdfRenderer) popFont() *Font {
+	ret := r.fonts[len(r.fonts)-1]
+	r.fonts = r.fonts[:len(r.fonts)]
+	return ret
+}
+
 func (r *PdfRenderer) countParentContainerBlocks(n *ast.Node) (ret int) {
 	for parent := n.Parent; nil != parent; parent = parent.Parent {
 		if ast.NodeBlockquote == parent.Type || ast.NodeList == parent.Type {
@@ -825,7 +906,7 @@ func (r *PdfRenderer) WriteString(content string) {
 		pageRight := r.pageSize.W - r.margin*2
 		for i, c := range runes {
 			if r.pdf.GetY() > r.pageSize.H-r.margin*2 {
-				r.pdf.AddPage()
+				r.addPage()
 			}
 
 			if '\n' == c {
@@ -858,7 +939,7 @@ func (r *PdfRenderer) WriteString(content string) {
 		}
 		if 0 < buf.Len() {
 			if r.pdf.GetY() > r.pageSize.H-r.margin*2 {
-				r.pdf.AddPage()
+				r.addPage()
 			}
 			r.pdf.Cell(nil, buf.String())
 		}
@@ -892,7 +973,7 @@ func (r *PdfRenderer) downloadImg(src string) (localPath string) {
 		Header: http.Header{
 			"User-Agent": []string{"Lute-PDF"},
 		},
-		URL:u,
+		URL: u,
 	}
 	resp, err := client.Do(req)
 	if nil != err {
@@ -941,4 +1022,26 @@ func (r *PdfRenderer) getImgSize(imgPath string) (width, height float64) {
 		h = w * imageRect.Dy() / imageRect.Dx()
 	}
 	return float64(w), float64(h)
+}
+
+func (r *PdfRenderer) addPage() {
+	r.renderFooter()
+	r.pdf.AddPage()
+}
+
+func (r *PdfRenderer) renderFooter() {
+	footer := r.LinkLabel + r.Link
+	r.pdf.SetFontWithStyle("msyh", gopdf.Regular, 10)
+	width, _ := r.pdf.MeasureTextWidth(footer)
+	x := r.pageSize.W - r.margin - width
+	r.pdf.SetX(x)
+	r.pdf.SetY(r.pageSize.H - r.margin)
+	r.pdf.Cell(nil, footer)
+	//r.pdf.SetFontWithStyle("msyh", gopdf.Regular, r.fontSize)
+}
+
+type Font struct {
+	family string
+	style  string // R|B|I|U
+	size   int
 }
