@@ -21,6 +21,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/88250/lute/ast"
 	"github.com/88250/lute/lex"
@@ -1036,7 +1037,9 @@ func (r *PdfRenderer) downloadImg(src string) (localPath string, isTemp bool) {
 	src = r.qiniuImgProcessing(src)
 	u, _ = url.Parse(src)
 
-	client := http.Client{}
+	client := http.Client{
+		Timeout: 5 * time.Second,
+	}
 	req := &http.Request{
 		Header: http.Header{
 			"User-Agent": []string{"Lute-PDF; +https://github.com/88250/lute-pdf"},
