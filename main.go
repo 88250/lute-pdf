@@ -20,11 +20,12 @@ import (
 )
 
 func main() {
-	argMdPath := flag.String("mdPath", "D:/88250/lute-pdf/sample.md", "Markdown 文件路径")
+	argMdPath := flag.String("mdPath", "D:/88250/lute-pdf/sample.md", "待转换的 Markdown 文件路径")
+	argSavePath := flag.String("savePath", "D:/88250/lute-pdf/sample.pdf", "转换后 PDF 的保存路径")
+
 	argRegularFontPath := flag.String("regularFontPath", "D:/88250/lute-pdf/fonts/msyh.ttf", "正常字体文件路径")
 	argBoldFontPath := flag.String("boldFontPath", "D:/88250/lute-pdf/fonts/msyhb.ttf", "粗体字体文件路径")
 	argItalicFontPath := flag.String("italicFontPath", "D:/88250/lute-pdf/fonts/msyhl.ttf", "斜体字体文件路径")
-	argSavePath := flag.String("savePath", "D:/88250/lute-pdf/sample.pdf", "转换后 PDF 的保存路径")
 
 	argCoverTitle := flag.String("coverTitle", "Lute PDF - Markdown 生成 PDF", "封面 - 标题")
 	argCoverAuthor := flag.String("coverAuthor", "88250", "封面 - 作者")
@@ -41,10 +42,11 @@ func main() {
 	flag.Parse()
 
 	mdPath := *argMdPath
+	savePath := *argSavePath
+
 	regularFontPath := *argRegularFontPath
 	boldFontPath := *argBoldFontPath
 	italicFontPath := *argItalicFontPath
-	savePath := *argSavePath
 
 	coverTitle := *argCoverTitle
 	coverAuthorLabel := "　　作者："
