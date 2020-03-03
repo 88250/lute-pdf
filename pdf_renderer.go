@@ -1052,6 +1052,11 @@ func (r *PdfRenderer) downloadImg(src string) (localPath string, isTemp bool) {
 		return src, false
 	}
 	defer resp.Body.Close()
+	if 200 != resp.StatusCode {
+		logger.Warnf("download image [%s] failed, status code is [%d]", src, resp.StatusCode)
+		return src, false
+	}
+
 	data, err := ioutil.ReadAll(resp.Body)
 	file, err := ioutil.TempFile("", "lute-pdf.img.")
 	if nil != err {
