@@ -81,30 +81,32 @@ type PdfCover struct {
 func (r *PdfRenderer) RenderCover() {
 	r.pdf.AddPage()
 
-	logoImgPath, isTemp := r.downloadImg(r.Cover.LogoLink)
-	imgW, imgH := r.getImgSize(logoImgPath)
-	x := (r.pageSize.W)/2 - imgW/2
-	y := r.pageSize.H/2 - r.margin - 128
-	r.pdf.Image(logoImgPath, x, y, nil)
-	r.pdf.SetY(y)
-	r.pdf.Br(imgH + 10)
-	r.pdf.SetFontWithStyle("regular", gopdf.Regular, 20)
-	width, _ := r.pdf.MeasureTextWidth(r.Cover.LogoTitle)
-	x = (r.pageSize.W)/2 - width/2
-	r.pdf.SetX(x)
-	y = r.pdf.GetY()
-	r.pdf.Cell(nil, r.Cover.LogoTitle)
-	r.pdf.AddExternalLink(r.Cover.LogoTitleLink, x, y, width, 20)
-	r.pdf.Br(48)
-	if isTemp {
-		os.Remove(logoImgPath)
+	logoImgPath, ok, isTemp := r.downloadImg(r.Cover.LogoLink)
+	if ok {
+		imgW, imgH := r.getImgSize(logoImgPath)
+		x := (r.pageSize.W)/2 - imgW/2
+		y := r.pageSize.H/2 - r.margin - 128
+		r.pdf.Image(logoImgPath, x, y, nil)
+		r.pdf.SetY(y)
+		r.pdf.Br(imgH + 10)
+		r.pdf.SetFontWithStyle("regular", gopdf.Regular, 20)
+		width, _ := r.pdf.MeasureTextWidth(r.Cover.LogoTitle)
+		x = (r.pageSize.W)/2 - width/2
+		r.pdf.SetX(x)
+		y = r.pdf.GetY()
+		r.pdf.Cell(nil, r.Cover.LogoTitle)
+		r.pdf.AddExternalLink(r.Cover.LogoTitleLink, x, y, width, 20)
+		r.pdf.Br(48)
+		if isTemp {
+			os.Remove(logoImgPath)
+		}
 	}
 
 	r.pdf.SetFontWithStyle("regular", gopdf.Regular, 28)
 	lines, _ := r.pdf.SplitText(r.Cover.Title, r.pageSize.W-r.margin)
 	for _, line := range lines {
 		width, _ := r.pdf.MeasureTextWidth(line)
-		x = (r.pageSize.W)/2 - width/2
+		x := (r.pageSize.W)/2 - width/2
 		r.pdf.SetX(x)
 		r.pdf.Cell(nil, line)
 		r.pdf.Br(30)
@@ -115,8 +117,8 @@ func (r *PdfRenderer) RenderCover() {
 	r.pdf.SetX(r.margin)
 	r.pdf.SetFontWithStyle("regular", gopdf.Regular, fontSize)
 	r.pdf.Cell(nil, r.Cover.AuthorLabel)
-	x = r.pdf.GetX()
-	width, _ = r.pdf.MeasureTextWidth(r.Cover.Author)
+	x := r.pdf.GetX()
+	width, _ := r.pdf.MeasureTextWidth(r.Cover.Author)
 	r.pdf.SetTextColor(66, 133, 244)
 	r.pdf.Cell(nil, r.Cover.Author)
 	r.pdf.AddExternalLink(r.Cover.AuthorLink, x, r.pdf.GetY(), width, float64(fontSize))
@@ -607,16 +609,18 @@ func (r *PdfRenderer) renderImage(node *ast.Node, entering bool) ast.WalkStatus 
 		if 0 == r.DisableTags {
 			destTokens := node.ChildByType(ast.NodeLinkDest).Tokens
 			src := util.BytesToStr(destTokens)
-			src, isTemp := r.downloadImg(src)
-			_, height := r.getImgSize(src)
-			y := r.pdf.GetY()
-			if math.Ceil(y)+height > math.Floor(r.pageSize.H-r.margin) {
-				r.addPage()
-			}
-			r.pdf.Image(src, r.pdf.GetX(), r.pdf.GetY(), nil)
-			r.pdf.SetY(r.pdf.GetY() + height)
-			if isTemp {
-				os.Remove(src)
+			src, ok, isTemp := r.downloadImg(src)
+			if ok {
+				_, height := r.getImgSize(src)
+				y := r.pdf.GetY()
+				if math.Ceil(y)+height > math.Floor(r.pageSize.H-r.margin) {
+					r.addPage()
+				}
+				r.pdf.Image(src, r.pdf.GetX(), r.pdf.GetY(), nil)
+				r.pdf.SetY(r.pdf.GetY() + height)
+				if isTemp {
+					os.Remove(src)
+				}
 			}
 		}
 		r.DisableTags++
@@ -1022,16 +1026,16 @@ func (r *PdfRenderer) Newline() {
 	}
 }
 
-func (r *PdfRenderer) downloadImg(src string) (localPath string, isTemp bool) {
+func (r *PdfRenderer) downloadImg(src string) (localPath string, ok, isTemp bool) {
 	u, err := url.Parse(src)
 	if nil != err {
-		logger.Warnf("image src [%s] is not an valid URL, treat it as local path", src)
-		return src, false
+		logger.Infof("image src [%s] is not an valid URL, treat it as local path", src)
+		return src, true, false
 	}
 
 	if !strings.HasPrefix(u.Scheme, "http") {
-		logger.Warnf("image src [%s] scheme is not [http] or [https], treat it as local path", src)
-		return src, false
+		logger.Infof("image src [%s] scheme is not [http] or [https], treat it as local path", src)
+		return src, true, false
 	}
 
 	src = r.qiniuImgProcessing(src)
@@ -1049,27 +1053,27 @@ func (r *PdfRenderer) downloadImg(src string) (localPath string, isTemp bool) {
 	resp, err := client.Do(req)
 	if nil != err {
 		logger.Warnf("download image [%s] failed: %s", src, err)
-		return src, false
+		return src, false, false
 	}
 	defer resp.Body.Close()
 	if 200 != resp.StatusCode {
 		logger.Warnf("download image [%s] failed, status code is [%d]", src, resp.StatusCode)
-		return src, false
+		return src, false, false
 	}
 
 	data, err := ioutil.ReadAll(resp.Body)
 	file, err := ioutil.TempFile("", "lute-pdf.img.")
 	if nil != err {
 		logger.Warnf("create temp image [%s] failed: %s", src, err)
-		return src, false
+		return src, false, false
 	}
 	_, err = file.Write(data)
 	if nil != err {
 		logger.Warnf("write temp image [%s] failed: %s", src, err)
-		return src, false
+		return src, false, false
 	}
 	file.Close()
-	return file.Name(), true
+	return file.Name(), true, true
 }
 
 // qiniuImgProcessing 七牛云图片样式处理。
