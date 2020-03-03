@@ -61,27 +61,27 @@ type PdfRenderer struct {
 
 // PdfCover 描述了 PDF 封面。
 type PdfCover struct {
-	Title         string
-	AuthorLabel   string
-	Author        string
-	AuthorLink    string
-	LinkLabel     string
-	Link          string
-	SourceLabel   string
-	Source        string
-	SourceLink    string
-	LicenseLabel  string
-	License       string
-	LicenseLink   string
-	LogoImgPath   string
-	LogoTitle     string
-	LogoTitleLink string
+	Title         string // 标题
+	AuthorLabel   string // 作者：
+	Author        string // 作者
+	AuthorLink    string // 作者链接
+	LinkLabel     string // 原文链接：
+	Link          string // 原文链接
+	SourceLabel   string // 来源网站：
+	Source        string // 来源网站
+	SourceLink    string // 来源网站链接
+	LicenseLabel  string // 许可协议：
+	License       string // 许可协议
+	LicenseLink   string // 许可协议链接
+	LogoLink      string // 图标链接
+	LogoTitle     string // 图片标题
+	LogoTitleLink string // 图标标题链接
 }
 
 func (r *PdfRenderer) RenderCover() {
 	r.pdf.AddPage()
 
-	logoImgPath := r.downloadImg(r.Cover.LogoImgPath)
+	logoImgPath := r.downloadImg(r.Cover.LogoLink)
 	imgW, imgH := r.getImgSize(logoImgPath)
 	x := (r.pageSize.W)/2 - imgW/2
 	y := r.pageSize.H/2 - r.margin - 128
