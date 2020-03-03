@@ -1065,6 +1065,7 @@ func (r *PdfRenderer) getImgSize(imgPath string) (width, height float64) {
 	if nil != err {
 		log.Fatal(err)
 	}
+	file.Close()
 
 	imageRect := img.Bounds()
 	k := 1
@@ -1091,15 +1092,21 @@ func (r *PdfRenderer) addPage() {
 }
 
 func (r *PdfRenderer) renderFooter() {
-	footer := r.Cover.LinkLabel + r.Cover.Link
+	footer := r.Cover.LinkLabel + r.Cover.Title
 	r.pdf.SetFont("regular", "R", 8)
 	r.pdf.SetTextColor(0, 0, 0)
+	labelWidth, _ := r.pdf.MeasureTextWidth(r.Cover.LinkLabel)
 	width, _ := r.pdf.MeasureTextWidth(footer)
 	x := r.pageSize.W - r.margin - width
 	r.pdf.SetX(x)
 	y := r.pageSize.H - r.margin
 	r.pdf.SetY(y)
-	r.pdf.Cell(nil, footer)
+	r.pdf.Cell(nil, r.Cover.LinkLabel)
+
+	r.pdf.SetTextColor(66, 133, 244)
+	r.pdf.Cell(nil, r.Cover.Title)
+	r.pdf.AddExternalLink(r.Cover.Link, x+labelWidth, y, width-labelWidth, 8)
+
 	font := r.peekFont()
 	r.pdf.SetFont(font.family, font.style, font.size)
 	textColor := r.peekTextColor()
