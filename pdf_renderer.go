@@ -81,7 +81,7 @@ type PdfCover struct {
 func (r *PdfRenderer) RenderCover() {
 	r.pdf.AddPage()
 
-	logoImgPath := r.downloadImg(r.Cover.LogoLink)
+	logoImgPath, isTemp := r.downloadImg(r.Cover.LogoLink)
 	imgW, imgH := r.getImgSize(logoImgPath)
 	x := (r.pageSize.W)/2 - imgW/2
 	y := r.pageSize.H/2 - r.margin - 128
@@ -96,6 +96,9 @@ func (r *PdfRenderer) RenderCover() {
 	r.pdf.Cell(nil, r.Cover.LogoTitle)
 	r.pdf.AddExternalLink(r.Cover.LogoTitleLink, x, y, width, 20)
 	r.pdf.Br(48)
+	if isTemp {
+		os.Remove(logoImgPath)
+	}
 
 	r.pdf.SetFontWithStyle("regular", gopdf.Regular, 28)
 	lines, _ := r.pdf.SplitText(r.Cover.Title, r.pageSize.W-r.margin)
@@ -605,7 +608,7 @@ func (r *PdfRenderer) renderImage(node *ast.Node, entering bool) ast.WalkStatus 
 			destTokens := node.ChildByType(ast.NodeLinkDest).Tokens
 			destTokens = r.Tree.Context.RelativePath(destTokens)
 			src := util.BytesToStr(destTokens)
-			src = r.downloadImg(src)
+			src, isTemp := r.downloadImg(src)
 			_, height := r.getImgSize(src)
 			y := r.pdf.GetY()
 			if math.Ceil(y)+height > math.Floor(r.pageSize.H-r.margin) {
@@ -613,6 +616,9 @@ func (r *PdfRenderer) renderImage(node *ast.Node, entering bool) ast.WalkStatus 
 			}
 			r.pdf.Image(src, r.pdf.GetX(), r.pdf.GetY(), nil)
 			r.pdf.SetY(r.pdf.GetY() + height)
+			if isTemp {
+				os.Remove(src)
+			}
 		}
 		r.DisableTags++
 		return ast.WalkContinue
@@ -1017,16 +1023,16 @@ func (r *PdfRenderer) Newline() {
 	}
 }
 
-func (r *PdfRenderer) downloadImg(src string) (localPath string) {
+func (r *PdfRenderer) downloadImg(src string) (localPath string, isTemp bool) {
 	u, err := url.Parse(src)
 	if nil != err {
 		log.Printf("image src [%s] is not an valid URL, treat it as local path", src)
-		return src
+		return src, false
 	}
 
 	if !strings.HasPrefix(u.Scheme, "http") {
 		log.Printf("image src [%s] scheme is not [http] or [https], treat it as local path", src)
-		return src
+		return src, false
 	}
 
 	client := http.Client{}
@@ -1039,22 +1045,22 @@ func (r *PdfRenderer) downloadImg(src string) (localPath string) {
 	resp, err := client.Do(req)
 	if nil != err {
 		log.Printf("download image [%s] failed: %s", src, err)
-		return src
+		return src, false
 	}
 	defer resp.Body.Close()
 	data, err := ioutil.ReadAll(resp.Body)
 	file, err := ioutil.TempFile("", "lute-pdf.img.")
 	if nil != err {
 		log.Printf("create temp image [%s] failed: %s", src, err)
-		return src
+		return src, false
 	}
 	_, err = file.Write(data)
 	if nil != err {
 		log.Printf("write temp image [%s] failed: %s", src, err)
-		return src
+		return src, false
 	}
 	file.Close()
-	return file.Name()
+	return file.Name(), true
 }
 func (r *PdfRenderer) getImgSize(imgPath string) (width, height float64) {
 	file, err := os.Open(imgPath)
