@@ -15,6 +15,7 @@ import (
 	"flag"
 	"io/ioutil"
 	"log"
+	"strings"
 
 	"github.com/88250/lute/parse"
 )
@@ -41,28 +42,28 @@ func main() {
 
 	flag.Parse()
 
-	mdPath := *argMdPath
-	savePath := *argSavePath
+	mdPath := trimQuote(*argMdPath)
+	savePath := trimQuote(*argSavePath)
 
-	regularFontPath := *argRegularFontPath
-	boldFontPath := *argBoldFontPath
-	italicFontPath := *argItalicFontPath
+	regularFontPath := trimQuote(*argRegularFontPath)
+	boldFontPath := trimQuote(*argBoldFontPath)
+	italicFontPath := trimQuote(*argItalicFontPath)
 
-	coverTitle := *argCoverTitle
+	coverTitle := trimQuote(*argCoverTitle)
 	coverAuthorLabel := "　　作者："
-	coverAuthor := *argCoverAuthor
-	coverAuthorLink := *argCoverAuthorLink
+	coverAuthor := trimQuote(*argCoverAuthor)
+	coverAuthorLink := trimQuote(*argCoverAuthorLink)
 	coverLinkLabel := "原文链接："
-	coverLink := *argCoverLink
+	coverLink := trimQuote(*argCoverLink)
 	coverSourceLabel := "来源网站："
-	coverSource := *argCoverSource
-	coverSourceLink := *argCoverSourceLink
+	coverSource := trimQuote(*argCoverSource)
+	coverSourceLink := trimQuote(*argCoverSourceLink)
 	coverLicenseLabel := "许可协议："
-	coverLicense := *argCoverLicense
-	coverLicenseLink := *argCoverLicenseLink
-	coverLogoLink := *argCoverLogoLink
-	coverLogoTitle := *argCoverLogoTitle
-	coverLogoTitleLink := *argCoverLogoTitleLink
+	coverLicense := trimQuote(*argCoverLicense)
+	coverLicenseLink := trimQuote(*argCoverLicenseLink)
+	coverLogoLink := trimQuote(*argCoverLogoLink)
+	coverLogoTitle := trimQuote(*argCoverLogoTitle)
+	coverLogoTitleLink := trimQuote(*argCoverLogoTitleLink)
 
 	options := &parse.Options{
 		GFMTable:            true,
@@ -117,4 +118,8 @@ func main() {
 	renderer.Save(savePath)
 
 	log.Println("completed")
+}
+
+func trimQuote(str string) string {
+	return strings.Trim(str, "\"'")
 }
