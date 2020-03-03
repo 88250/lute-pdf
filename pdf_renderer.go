@@ -606,7 +606,6 @@ func (r *PdfRenderer) renderImage(node *ast.Node, entering bool) ast.WalkStatus 
 	if entering {
 		if 0 == r.DisableTags {
 			destTokens := node.ChildByType(ast.NodeLinkDest).Tokens
-			destTokens = r.Tree.Context.RelativePath(destTokens)
 			src := util.BytesToStr(destTokens)
 			src, isTemp := r.downloadImg(src)
 			_, height := r.getImgSize(src)
@@ -1035,10 +1034,13 @@ func (r *PdfRenderer) downloadImg(src string) (localPath string, isTemp bool) {
 		return src, false
 	}
 
+	src = r.qiniuImgProcessing(src)
+	u, _ = url.Parse(src)
+
 	client := http.Client{}
 	req := &http.Request{
 		Header: http.Header{
-			"User-Agent": []string{"Lute-PDF"},
+			"User-Agent": []string{"Lute-PDF; +https://github.com/88250/lute-pdf"},
 		},
 		URL: u,
 	}
@@ -1062,6 +1064,24 @@ func (r *PdfRenderer) downloadImg(src string) (localPath string, isTemp bool) {
 	file.Close()
 	return file.Name(), true
 }
+
+// qiniuImgProcessing 七牛云图片样式处理。
+func (r *PdfRenderer) qiniuImgProcessing(src string) string {
+	if !strings.Contains(src, "img.hacpai.com") {
+		return src
+	}
+
+	if 0 < strings.Index(src, "?") {
+		src = src[:strings.Index(src, "?")]
+	}
+
+	maxWidth := int(math.Round(r.pageSize.W-r.margin*2) * 128 / 72)
+	style := "imageView2/2/w/%d/interlace/1/format/jpg"
+	style = fmt.Sprintf(style, maxWidth)
+	src += "?" + style
+	return src
+}
+
 func (r *PdfRenderer) getImgSize(imgPath string) (width, height float64) {
 	file, err := os.Open(imgPath)
 	if nil != err {
