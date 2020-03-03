@@ -1027,6 +1027,10 @@ func (r *PdfRenderer) Newline() {
 }
 
 func (r *PdfRenderer) downloadImg(src string) (localPath string, ok, isTemp bool) {
+	if strings.HasPrefix(src, "//") {
+		src = "https:" + src
+	}
+
 	u, err := url.Parse(src)
 	if nil != err {
 		logger.Infof("image src [%s] is not an valid URL, treat it as local path", src)
@@ -1078,7 +1082,7 @@ func (r *PdfRenderer) downloadImg(src string) (localPath string, ok, isTemp bool
 
 // qiniuImgProcessing 七牛云图片样式处理。
 func (r *PdfRenderer) qiniuImgProcessing(src string) string {
-	if !strings.Contains(src, "img.hacpai.com") {
+	if !strings.Contains(src, "img.hacpai.com") && !strings.Contains(src, "imageView") {
 		return src
 	}
 
