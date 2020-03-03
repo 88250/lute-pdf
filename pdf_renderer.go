@@ -964,7 +964,7 @@ func (r *PdfRenderer) WriteString(content string) {
 		x := r.pdf.GetX()
 		startX := x
 		runes := []rune(content)
-		pageRight := r.pageSize.W - r.margin*2
+		pageRight := r.pageSize.W - r.margin
 		font := r.peekFont()
 		if nil != font {
 			r.pdf.SetFont(font.family, font.style, font.size)
