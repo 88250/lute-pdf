@@ -15,7 +15,6 @@ import (
 	"fmt"
 	"image"
 	"io/ioutil"
-	"log"
 	"math"
 	"net/http"
 	"net/url"
@@ -179,22 +178,22 @@ func NewPdfRenderer(tree *parse.Tree, regularFont, boldFont, italicFont string) 
 	var err error
 	err = pdf.AddTTFFont("regular", ret.RegularFont)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	err = pdf.AddTTFFontWithOption("bold", ret.BoldFont, gopdf.TtfOption{Style: gopdf.Bold})
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	err = pdf.AddTTFFontWithOption("italic", ret.ItalicFont, gopdf.TtfOption{Style: gopdf.Italic})
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	//err = pdf.AddTTFFont("emoji", "fonts/seguiemj.ttf")
 	//if err != nil {
-	//	log.Fatal(err)
+	//	logger.Fatal(err)
 	//}
 
 	ret.pushFont(&Font{"regular", "R", ret.fontSize})
@@ -671,10 +670,10 @@ func (r *PdfRenderer) renderDocument(node *ast.Node, entering bool) ast.WalkStat
 
 func (r *PdfRenderer) Save(pdfPath string) {
 	if err := r.pdf.WritePdf(pdfPath); nil != err {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 	if err := r.pdf.Close(); nil != err {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 }
 
@@ -1025,12 +1024,12 @@ func (r *PdfRenderer) Newline() {
 func (r *PdfRenderer) downloadImg(src string) (localPath string, isTemp bool) {
 	u, err := url.Parse(src)
 	if nil != err {
-		log.Printf("image src [%s] is not an valid URL, treat it as local path", src)
+		logger.Warnf("image src [%s] is not an valid URL, treat it as local path", src)
 		return src, false
 	}
 
 	if !strings.HasPrefix(u.Scheme, "http") {
-		log.Printf("image src [%s] scheme is not [http] or [https], treat it as local path", src)
+		logger.Warnf("image src [%s] scheme is not [http] or [https], treat it as local path", src)
 		return src, false
 	}
 
@@ -1046,19 +1045,19 @@ func (r *PdfRenderer) downloadImg(src string) (localPath string, isTemp bool) {
 	}
 	resp, err := client.Do(req)
 	if nil != err {
-		log.Printf("download image [%s] failed: %s", src, err)
+		logger.Warnf("download image [%s] failed: %s", src, err)
 		return src, false
 	}
 	defer resp.Body.Close()
 	data, err := ioutil.ReadAll(resp.Body)
 	file, err := ioutil.TempFile("", "lute-pdf.img.")
 	if nil != err {
-		log.Printf("create temp image [%s] failed: %s", src, err)
+		logger.Warnf("create temp image [%s] failed: %s", src, err)
 		return src, false
 	}
 	_, err = file.Write(data)
 	if nil != err {
-		log.Printf("write temp image [%s] failed: %s", src, err)
+		logger.Warnf("write temp image [%s] failed: %s", src, err)
 		return src, false
 	}
 	file.Close()
@@ -1085,11 +1084,11 @@ func (r *PdfRenderer) qiniuImgProcessing(src string) string {
 func (r *PdfRenderer) getImgSize(imgPath string) (width, height float64) {
 	file, err := os.Open(imgPath)
 	if nil != err {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 	img, _, err := image.Decode(file)
 	if nil != err {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 	file.Close()
 

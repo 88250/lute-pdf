@@ -14,11 +14,18 @@ import (
 	"bytes"
 	"flag"
 	"io/ioutil"
-	"log"
+	"os"
 	"strings"
 
+	"github.com/88250/gulu"
 	"github.com/88250/lute/parse"
 )
+
+var logger *gulu.Logger
+
+func init() {
+	logger = gulu.Log.NewLogger(os.Stdout)
+}
 
 func main() {
 	argMdPath := flag.String("mdPath", "D:/88250/lute-pdf/sample.md", "待转换的 Markdown 文件路径")
@@ -77,7 +84,7 @@ func main() {
 
 	markdown, err := ioutil.ReadFile(mdPath)
 	if nil != err {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	markdown = bytes.ReplaceAll(markdown, []byte("\t"), []byte("    "))
@@ -87,7 +94,7 @@ func main() {
 
 	tree, err := parse.Parse("", markdown, options)
 	if nil != err {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	renderer := NewPdfRenderer(tree, regularFontPath, boldFontPath, italicFontPath)
@@ -112,12 +119,12 @@ func main() {
 
 	_, err = renderer.Render()
 	if nil != err {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	renderer.Save(savePath)
 
-	log.Println("completed")
+	logger.Info("completed")
 }
 
 func trimQuote(str string) string {
