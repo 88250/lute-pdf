@@ -35,7 +35,6 @@ import (
 type PdfRenderer struct {
 	*render.BaseRenderer
 	needRenderFootnotesDef bool
-	headingCnt             int
 
 	Cover       *PdfCover // 封面
 	RegularFont string    // 正常字体文件路径
@@ -159,8 +158,8 @@ func (r *PdfRenderer) RenderCover() {
 func NewPdfRenderer(tree *parse.Tree, regularFont, boldFont, italicFont string) *PdfRenderer {
 	pdf := &gopdf.GoPdf{}
 
-	ret := &PdfRenderer{BaseRenderer: render.NewBaseRenderer(tree), needRenderFootnotesDef: false, headingCnt: 0, pdf: pdf}
-	ret.zoom = 0.75
+	ret := &PdfRenderer{BaseRenderer: render.NewBaseRenderer(tree), needRenderFootnotesDef: false, pdf: pdf}
+	ret.zoom = 0.8
 	ret.fontSize = int(math.Floor(14 * ret.zoom))
 	ret.lineHeight = 24.0 * ret.zoom
 	ret.heading1Size = 24 * ret.zoom
