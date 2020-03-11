@@ -93,11 +93,7 @@ func main() {
 		markdown = bytes.ReplaceAll(markdown, []byte(emojiUnicode), []byte(":"+emojiAlias+":"))
 	}
 
-	tree, err := parse.Parse("", markdown, options)
-	if nil != err {
-		logger.Fatal(err)
-	}
-
+	tree := parse.Parse("", markdown, options)
 	renderer := NewPdfRenderer(tree, regularFontPath, boldFontPath, italicFontPath)
 	renderer.Cover = &PdfCover{
 		Title:         coverTitle,
