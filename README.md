@@ -10,7 +10,7 @@ Lute PDF 是一款将 Markdown 文本转换为 PDF 的小工具。通过 [Lute](
 
 ## 📸 截图
 
-![sample](https://user-images.githubusercontent.com/873584/75747451-eee8e600-5d57-11ea-9dd7-555d49aa68c1.png)
+![sample](https://user-images.githubusercontent.com/873584/76400242-f2fdaf00-63ba-11ea-9769-e4b8b3c6111f.png)
 
 ## ⚗ 用法
 
