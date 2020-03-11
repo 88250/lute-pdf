@@ -391,7 +391,7 @@ func (r *PdfRenderer) renderFootnotesRef(node *ast.Node, entering bool) ast.Walk
 	width, _ := r.pdf.MeasureTextWidth(idx[1:])
 	r.pdf.SetY(y - 4)
 	r.pdf.Cell(nil, idx[1:])
-	r.pdf.AddInternalLink(idx, x, y, width, r.lineHeight)
+	r.pdf.AddInternalLink(idx, x-3, y-9, width+4, r.lineHeight)
 
 	x += width
 	r.pdf.SetX(x)
