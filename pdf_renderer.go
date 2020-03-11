@@ -364,19 +364,13 @@ func (r *PdfRenderer) RenderFootnotesDefs(context *parse.Context) []byte {
 	r.addPage()
 	r.renderThematicBreak(nil, false)
 	for i, def := range context.FootnotesDefs {
+		r.pdf.SetAnchor(string(def.Tokens))
 		r.WriteString(fmt.Sprint(i+1) + ". ")
 		tree := &parse.Tree{Name: "", Context: context}
 		tree.Context.Tree = tree
 		tree.Root = &ast.Node{Type: ast.NodeDocument}
 		tree.Root.AppendChild(def)
 		r.Tree = tree
-		lc := tree.Root.LastDeepestChild()
-		for i = len(def.FootnotesRefs) - 1; 0 <= i; i-- {
-			ref := def.FootnotesRefs[i]
-			gotoRef := " <a href=\"#footnotes-ref-" + ref.FootnotesRefId + "\" class=\"footnotes-goto-ref\">↩</a>"
-			link := &ast.Node{Type: ast.NodeInlineHTML, Tokens: util.StrToBytes(gotoRef)}
-			lc.InsertAfter(link)
-		}
 		r.needRenderFootnotesDef = true
 		r.Render()
 		r.Newline()
@@ -387,13 +381,25 @@ func (r *PdfRenderer) RenderFootnotesDefs(context *parse.Context) []byte {
 }
 
 func (r *PdfRenderer) renderFootnotesRef(node *ast.Node, entering bool) ast.WalkStatus {
-	idx, _ := r.Tree.Context.FindFootnotesDef(node.Tokens)
-	idxStr := strconv.Itoa(idx)
-	//r.tag("sup", [][]string{{"class", "footnotes-ref"}, {"id", "footnotes-ref-" + node.FootnotesRefId}}, false)
-	//r.tag("a", [][]string{{"href", "#footnotes-def-" + idxStr}}, false)
-	r.WriteString(idxStr)
-	//r.tag("/a", nil, false)
-	//r.tag("/sup", nil, false)
+	x := r.pdf.GetX() + 1
+	r.pdf.SetX(x)
+	y := r.pdf.GetY()
+	r.pdf.SetFont("regular", "R", 8)
+	r.pdf.SetTextColor(66, 133, 244)
+
+	idx := string(node.Tokens)
+	width, _ := r.pdf.MeasureTextWidth(idx[1:])
+	r.pdf.SetY(y - 4)
+	r.pdf.Cell(nil, idx[1:])
+	r.pdf.AddInternalLink(idx, x, y, width, r.lineHeight)
+
+	x += width
+	r.pdf.SetX(x)
+	r.pdf.SetY(y)
+	font := r.peekFont()
+	r.pdf.SetFont(font.family, font.style, font.size)
+	textColor := r.peekTextColor()
+	r.pdf.SetTextColor(textColor.R, textColor.G, textColor.B)
 	return ast.WalkStop
 }
 
