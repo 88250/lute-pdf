@@ -276,6 +276,39 @@ func NewPdfRenderer(tree *parse.Tree, regularFont, boldFont, italicFont string) 
 	return ret
 }
 
+func (r *PdfRenderer) Render() (output []byte) {
+	r.LastOut = lex.ItemNewline
+
+	ast.Walk(r.Tree.Root, func(n *ast.Node, entering bool) ast.WalkStatus {
+		extRender := r.ExtRendererFuncs[n.Type]
+		if nil != extRender {
+			output, status := extRender(n, entering)
+			r.WriteString(output)
+			return status
+		}
+
+		render := r.RendererFuncs[n.Type]
+		if nil == render {
+			if nil != r.DefaultRendererFunc {
+				return r.DefaultRendererFunc(n, entering)
+			} else {
+				return r.renderDefault(n, entering)
+			}
+		}
+		return render(n, entering)
+	})
+
+	if r.Option.Footnotes && 0 < len(r.Tree.Context.FootnotesDefs) {
+		output = r.RenderFootnotesDefs(r.Tree.Context)
+	}
+	return
+}
+
+func (r *PdfRenderer) renderDefault(n *ast.Node, entering bool) ast.WalkStatus {
+	r.WriteString("not found render function for node [type=" + n.Type.String() + ", Tokens=" + util.BytesToStr(n.Tokens) + "]")
+	return ast.WalkContinue
+}
+
 func (r *PdfRenderer) renderBackslashContent(node *ast.Node, entering bool) ast.WalkStatus {
 	r.Write(node.Tokens)
 	return ast.WalkStop
@@ -324,16 +357,19 @@ func (r *PdfRenderer) headings0(n *ast.Node, headings *[]*ast.Node) {
 }
 
 func (r *PdfRenderer) RenderFootnotesDefs(context *parse.Context) []byte {
-	r.WriteString("<div class=\"footnotes-defs-div\">")
-	r.WriteString("<hr class=\"footnotes-defs-hr\" />\n")
-	r.WriteString("<ol class=\"footnotes-defs-ol\">")
+	if r.needRenderFootnotesDef {
+		return nil
+	}
+
+	r.addPage()
+	r.renderThematicBreak(nil, false)
 	for i, def := range context.FootnotesDefs {
-		r.WriteString("<li id=\"footnotes-def-" + strconv.Itoa(i+1) + "\">")
+		r.WriteString(fmt.Sprint(i+1) + ". ")
 		tree := &parse.Tree{Name: "", Context: context}
 		tree.Context.Tree = tree
 		tree.Root = &ast.Node{Type: ast.NodeDocument}
 		tree.Root.AppendChild(def)
-		defRenderer := NewPdfRenderer(tree, r.RegularFont, r.BoldFont, r.ItalicFont)
+		r.Tree = tree
 		lc := tree.Root.LastDeepestChild()
 		for i = len(def.FootnotesRefs) - 1; 0 <= i; i-- {
 			ref := def.FootnotesRefs[i]
@@ -341,17 +377,13 @@ func (r *PdfRenderer) RenderFootnotesDefs(context *parse.Context) []byte {
 			link := &ast.Node{Type: ast.NodeInlineHTML, Tokens: util.StrToBytes(gotoRef)}
 			lc.InsertAfter(link)
 		}
-		defRenderer.needRenderFootnotesDef = true
-		defContent, err := defRenderer.Render()
-		if nil != err {
-			break
-		}
-		r.Write(defContent)
-
-		r.WriteString("</li>\n")
+		r.needRenderFootnotesDef = true
+		r.Render()
+		r.Newline()
 	}
-	r.WriteString("</ol></div>")
-	return r.Writer.Bytes()
+	r.needRenderFootnotesDef = false
+	r.renderFooter()
+	return nil
 }
 
 func (r *PdfRenderer) renderFootnotesRef(node *ast.Node, entering bool) ast.WalkStatus {
@@ -1132,6 +1164,9 @@ func (r *PdfRenderer) addPage() {
 }
 
 func (r *PdfRenderer) renderFooter() {
+	if r.needRenderFootnotesDef {
+		return
+	}
 	footer := r.Cover.LinkLabel + r.Cover.Title
 	r.pdf.SetFont("regular", "R", 8)
 	r.pdf.SetTextColor(0, 0, 0)

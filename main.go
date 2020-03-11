@@ -79,6 +79,7 @@ func main() {
 		GFMAutoLink:         true,
 		SoftBreak2HardBreak: true,
 		Emoji:               true,
+		Footnotes:           true,
 	}
 	options.AliasEmoji, options.EmojiAlias = parse.NewEmojis()
 
@@ -117,11 +118,7 @@ func main() {
 	}
 	renderer.RenderCover()
 
-	_, err = renderer.Render()
-	if nil != err {
-		logger.Fatal(err)
-	}
-
+	renderer.Render()
 	renderer.Save(savePath)
 
 	logger.Info("completed")
