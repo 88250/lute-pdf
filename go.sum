@@ -1,7 +1,7 @@
 github.com/88250/gulu v1.1.0 h1:aU8HncW1XNssT1insCOz6rvmTUDrtsDwSnzeqTEqNFA=
 github.com/88250/gulu v1.1.0/go.mod h1:a2POIziN+QFeNT4Mj7FHH2lz1HEaFlMRF6wPE0NHM4U=
-github.com/88250/lute v1.2.5 h1:Yzn1NIkPu5ARVckM6wOBVLRkQO2t6uVR0huvzPdLiRI=
-github.com/88250/lute v1.2.5/go.mod h1:sAo/kdyurrs5Ol96TgJLjt+seV64QZLOM1dzs85eLoo=
+github.com/88250/lute v1.2.7 h1:KFp74PR6E0baZsB4NL7/MJDrZ7iB7Fyg8uKTr57YCw8=
+github.com/88250/lute v1.2.7/go.mod h1:sAo/kdyurrs5Ol96TgJLjt+seV64QZLOM1dzs85eLoo=
 github.com/alecthomas/assert v0.0.0-20170929043011-405dbfeb8e38 h1:smF2tmSOzy2Mm+0dGI2AIUHY+w0BUc+4tn40djz7+6U=
 github.com/alecthomas/assert v0.0.0-20170929043011-405dbfeb8e38/go.mod h1:r7bzyVFMNntcxPZXK3/+KdruV1H5KSlyVY0gc+NgInI=
 github.com/alecthomas/chroma v0.7.1 h1:G1i02OhUbRi2nJxcNkwJaY/J1gHXj9tt72qN6ZouLFQ=
