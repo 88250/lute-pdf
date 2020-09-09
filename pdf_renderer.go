@@ -1119,7 +1119,7 @@ func (r *PdfRenderer) downloadImg(src string) (localPath string, ok, isTemp bool
 
 // qiniuImgProcessing 七牛云图片样式处理。
 func (r *PdfRenderer) qiniuImgProcessing(src string) string {
-	if !strings.Contains(src, "img.hacpai.com") && !strings.Contains(src, "imageView") {
+	if !strings.Contains(src, "img.hacpai.com") && !strings.Contains(src, "b3logfile.com") && !strings.Contains(src, "imageView") {
 		return src
 	}
 
