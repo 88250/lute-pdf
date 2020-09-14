@@ -273,6 +273,8 @@ func NewPdfRenderer(tree *parse.Tree, regularFont, boldFont, italicFont string) 
 	ret.RendererFuncs[ast.NodeToC] = ret.renderToC
 	ret.RendererFuncs[ast.NodeBackslash] = ret.renderBackslash
 	ret.RendererFuncs[ast.NodeBackslashContent] = ret.renderBackslashContent
+	ret.RendererFuncs[ast.NodeHTMLEntity] = ret.renderHtmlEntity
+	ret.RendererFuncs[ast.NodeYamlFrontMatter] = ret.renderYamlFrontMatter
 	return ret
 }
 
@@ -305,8 +307,17 @@ func (r *PdfRenderer) Render() (output []byte) {
 }
 
 func (r *PdfRenderer) renderDefault(n *ast.Node, entering bool) ast.WalkStatus {
-	r.WriteString("not found render function for node [type=" + n.Type.String() + ", Tokens=" + util.BytesToStr(n.Tokens) + "]")
 	return ast.WalkContinue
+}
+
+func (r *PdfRenderer) renderYamlFrontMatter(node *ast.Node, entering bool) ast.WalkStatus {
+	r.renderCodeBlockLike(node.Tokens)
+	return ast.WalkStop
+}
+
+func (r *PdfRenderer) renderHtmlEntity(node *ast.Node, entering bool) ast.WalkStatus {
+	r.Write(node.HtmlEntityTokens)
+	return ast.WalkStop
 }
 
 func (r *PdfRenderer) renderBackslashContent(node *ast.Node, entering bool) ast.WalkStatus {
@@ -996,6 +1007,9 @@ func (r *PdfRenderer) Write(content []byte) {
 
 // WriteString 输出指定的字符串 content。
 func (r *PdfRenderer) WriteString(content string) {
+	// PDF 引擎处理不了不换行空格（NBSP）
+	content = strings.ReplaceAll(content, " ", " ")
+
 	if length := len(content); 0 < length {
 		buf := bytes.Buffer{}
 		x := r.pdf.GetX()

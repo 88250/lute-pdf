@@ -80,6 +80,7 @@ func main() {
 		SoftBreak2HardBreak: true,
 		Emoji:               true,
 		Footnotes:           true,
+		YamlFrontMatter:     true,
 	}
 	options.AliasEmoji, options.EmojiAlias = parse.NewEmojis()
 
