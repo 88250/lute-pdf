@@ -34,7 +34,6 @@ import (
 // PdfRenderer 描述了 PDF 渲染器。
 type PdfRenderer struct {
 	*render.BaseRenderer
-	needRenderFootnotesDef bool
 
 	Cover       *PdfCover // 封面
 	RegularFont string    // 正常字体文件路径
@@ -158,7 +157,7 @@ func (r *PdfRenderer) RenderCover() {
 func NewPdfRenderer(tree *parse.Tree, regularFont, boldFont, italicFont string) *PdfRenderer {
 	pdf := &gopdf.GoPdf{}
 
-	ret := &PdfRenderer{BaseRenderer: render.NewBaseRenderer(tree), needRenderFootnotesDef: false, pdf: pdf}
+	ret := &PdfRenderer{BaseRenderer: render.NewBaseRenderer(tree), pdf: pdf}
 	ret.zoom = 0.8
 	ret.fontSize = int(math.Floor(14 * ret.zoom))
 	ret.lineHeight = 24.0 * ret.zoom
@@ -268,6 +267,7 @@ func NewPdfRenderer(tree *parse.Tree, regularFont, boldFont, italicFont string) 
 	ret.RendererFuncs[ast.NodeEmojiUnicode] = ret.renderEmojiUnicode
 	ret.RendererFuncs[ast.NodeEmojiImg] = ret.renderEmojiImg
 	ret.RendererFuncs[ast.NodeEmojiAlias] = ret.renderEmojiAlias
+	ret.RendererFuncs[ast.NodeFootnotesDefBlock] = ret.renderFootnotesDefBlock
 	ret.RendererFuncs[ast.NodeFootnotesDef] = ret.renderFootnotesDef
 	ret.RendererFuncs[ast.NodeFootnotesRef] = ret.renderFootnotesRef
 	ret.RendererFuncs[ast.NodeToC] = ret.renderToC
@@ -300,7 +300,7 @@ func (r *PdfRenderer) Render() (output []byte) {
 		return render(n, entering)
 	})
 
-	if r.Option.Footnotes && 0 < len(r.Tree.Context.FootnotesDefs) {
+	if r.Option.Footnotes && 0 < len(r.FootnotesDefs) {
 		output = r.RenderFootnotesDefs(r.Tree.Context)
 	}
 	return
@@ -311,18 +311,24 @@ func (r *PdfRenderer) renderDefault(n *ast.Node, entering bool) ast.WalkStatus {
 }
 
 func (r *PdfRenderer) renderYamlFrontMatter(node *ast.Node, entering bool) ast.WalkStatus {
-	r.renderCodeBlockLike(node.Tokens)
-	return ast.WalkStop
+	if entering {
+		r.renderCodeBlockLike(node.Tokens)
+	}
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderHtmlEntity(node *ast.Node, entering bool) ast.WalkStatus {
-	r.Write(node.HtmlEntityTokens)
-	return ast.WalkStop
+	if entering {
+		r.Write(node.HtmlEntityTokens)
+	}
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderBackslashContent(node *ast.Node, entering bool) ast.WalkStatus {
-	r.Write(node.Tokens)
-	return ast.WalkStop
+	if entering {
+		r.Write(node.Tokens)
+	}
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderBackslash(node *ast.Node, entering bool) ast.WalkStatus {
@@ -330,22 +336,23 @@ func (r *PdfRenderer) renderBackslash(node *ast.Node, entering bool) ast.WalkSta
 }
 
 func (r *PdfRenderer) renderToC(node *ast.Node, entering bool) ast.WalkStatus {
-	headings := r.headings()
-	length := len(headings)
-	if 1 > length {
-		return ast.WalkStop
+	if entering {
+		headings := r.headings()
+		length := len(headings)
+		if 1 > length {
+			return ast.WalkContinue
+		}
+		r.WriteString("<div class=\"toc-div\">")
+		for i, heading := range headings {
+			level := strconv.Itoa(heading.HeadingLevel)
+			spaces := (heading.HeadingLevel - 1) * 2
+			r.WriteString(strings.Repeat("&emsp;", spaces))
+			r.WriteString("<span class=\"toc-h" + level + "\">")
+			r.WriteString("<a class=\"toc-a\" href=\"#toc_h" + level + "_" + strconv.Itoa(i) + "\">" + heading.Text() + "</a></span><br>")
+		}
+		r.WriteString("</div>\n\n")
 	}
-	r.WriteString("<div class=\"toc-div\">")
-	for i, heading := range headings {
-		level := strconv.Itoa(heading.HeadingLevel)
-		spaces := (heading.HeadingLevel - 1) * 2
-		r.WriteString(strings.Repeat("&emsp;", spaces))
-		r.WriteString("<span class=\"toc-h" + level + "\">")
-		r.WriteString("<a class=\"toc-a\" href=\"#toc_h" + level + "_" + strconv.Itoa(i) + "\">" + heading.Text() + "</a></span><br>")
-	}
-	r.WriteString("</div>\n\n")
-
-	return ast.WalkStop
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) headings() (ret []*ast.Node) {
@@ -368,13 +375,14 @@ func (r *PdfRenderer) headings0(n *ast.Node, headings *[]*ast.Node) {
 }
 
 func (r *PdfRenderer) RenderFootnotesDefs(context *parse.Context) []byte {
-	if r.needRenderFootnotesDef {
+	if 1 > len(r.FootnotesDefs) || r.RenderingFootnotes {
 		return nil
 	}
 
+	r.RenderingFootnotes = true
 	r.addPage()
 	r.renderThematicBreak(nil, false)
-	for i, def := range context.FootnotesDefs {
+	for i, def := range r.FootnotesDefs {
 		r.pdf.SetAnchor(string(def.Tokens))
 		r.WriteString(fmt.Sprint(i+1) + ". ")
 		tree := &parse.Tree{Name: "", Context: context}
@@ -382,58 +390,78 @@ func (r *PdfRenderer) RenderFootnotesDefs(context *parse.Context) []byte {
 		tree.Root = &ast.Node{Type: ast.NodeDocument}
 		tree.Root.AppendChild(def)
 		r.Tree = tree
-		r.needRenderFootnotesDef = true
 		r.Render()
 		r.Newline()
 	}
-	r.needRenderFootnotesDef = false
 	r.renderFooter()
 	return nil
 }
 
 func (r *PdfRenderer) renderFootnotesRef(node *ast.Node, entering bool) ast.WalkStatus {
-	x := r.pdf.GetX() + 1
-	r.pdf.SetX(x)
-	y := r.pdf.GetY()
-	r.pdf.SetFont("regular", "R", 8)
-	r.pdf.SetTextColor(66, 133, 244)
+	if entering {
+		x := r.pdf.GetX() + 1
+		r.pdf.SetX(x)
+		y := r.pdf.GetY()
+		r.pdf.SetFont("regular", "R", 8)
+		r.pdf.SetTextColor(66, 133, 244)
 
-	idx := string(node.Tokens)
-	width, _ := r.pdf.MeasureTextWidth(idx[1:])
-	r.pdf.SetY(y - 4)
-	r.pdf.Cell(nil, idx[1:])
-	r.pdf.AddInternalLink(idx, x-3, y-9, width+4, r.lineHeight)
+		idx := string(node.Tokens)
+		width, _ := r.pdf.MeasureTextWidth(idx[1:])
+		r.pdf.SetY(y - 4)
+		r.pdf.Cell(nil, idx[1:])
+		r.pdf.AddInternalLink(idx, x-3, y-9, width+4, r.lineHeight)
 
-	x += width
-	r.pdf.SetX(x)
-	r.pdf.SetY(y)
-	font := r.peekFont()
-	r.pdf.SetFont(font.family, font.style, font.size)
-	textColor := r.peekTextColor()
-	r.pdf.SetTextColor(textColor.R, textColor.G, textColor.B)
-	return ast.WalkStop
+		x += width
+		r.pdf.SetX(x)
+		r.pdf.SetY(y)
+		font := r.peekFont()
+		r.pdf.SetFont(font.family, font.style, font.size)
+		textColor := r.peekTextColor()
+		r.pdf.SetTextColor(textColor.R, textColor.G, textColor.B)
+	}
+	return ast.WalkContinue
+}
+
+func (r *PdfRenderer) renderFootnotesDefBlock(node *ast.Node, entering bool) ast.WalkStatus {
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderFootnotesDef(node *ast.Node, entering bool) ast.WalkStatus {
-	if !r.needRenderFootnotesDef {
-		return ast.WalkStop
+	if entering {
+		if !r.RenderingFootnotes {
+			var found bool
+			for _, n := range r.FootnotesDefs {
+				if bytes.EqualFold(node.Tokens, n.Tokens) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				r.FootnotesDefs = append(r.FootnotesDefs, node)
+			}
+			return ast.WalkSkipChildren
+		}
 	}
 	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderCodeBlock(node *ast.Node, entering bool) ast.WalkStatus {
-	if !node.IsFencedCodeBlock {
-		// 缩进代码块处理
-		r.renderCodeBlockLike(node.Tokens)
-		return ast.WalkStop
+	if entering {
+		if !node.IsFencedCodeBlock {
+			// 缩进代码块处理
+			r.renderCodeBlockLike(node.Tokens)
+			return ast.WalkContinue
+		}
 	}
 	return ast.WalkContinue
 }
 
 // renderCodeBlockCode 进行代码块 HTML 渲染，实现语法高亮。
 func (r *PdfRenderer) renderCodeBlockCode(node *ast.Node, entering bool) ast.WalkStatus {
-	r.renderCodeBlockLike(node.Tokens)
-	return ast.WalkStop
+	if entering {
+		r.renderCodeBlockLike(node.Tokens)
+	}
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderCodeBlockLike(content []byte) {
@@ -453,52 +481,58 @@ func (r *PdfRenderer) renderCodeSpanLike(content []byte) {
 }
 
 func (r *PdfRenderer) renderCodeBlockCloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	return ast.WalkStop
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderCodeBlockInfoMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	return ast.WalkStop
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderCodeBlockOpenMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	return ast.WalkStop
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderEmojiAlias(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pushFont(&Font{"emoji", "R", r.fontSize})
-	alias := node.Tokens[1 : len(node.Tokens)-1]
-	r.WriteString(r.Option.AliasEmoji[string(alias)])
-	r.popFont()
-	return ast.WalkStop
+	if entering {
+		r.pushFont(&Font{"emoji", "R", r.fontSize})
+		alias := node.Tokens[1 : len(node.Tokens)-1]
+		r.WriteString(r.Option.AliasEmoji[string(alias)])
+		r.popFont()
+	}
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderEmojiImg(node *ast.Node, entering bool) ast.WalkStatus {
-	return ast.WalkStop
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderEmojiUnicode(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pushFont(&Font{"emoji", "R", r.fontSize})
-	r.Write(node.Tokens)
-	r.popFont()
-	return ast.WalkStop
+	if entering {
+		r.pushFont(&Font{"emoji", "R", r.fontSize})
+		r.Write(node.Tokens)
+		r.popFont()
+	}
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderEmoji(node *ast.Node, entering bool) ast.WalkStatus {
 	// 暂不渲染 Emoji，字体似乎有问题
-	return ast.WalkStop
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderInlineMathCloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	return ast.WalkStop
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderInlineMathContent(node *ast.Node, entering bool) ast.WalkStatus {
-	r.renderCodeSpanLike(node.Tokens)
-	return ast.WalkStop
+	if entering {
+		r.renderCodeSpanLike(node.Tokens)
+	}
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderInlineMathOpenMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	return ast.WalkStop
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderInlineMath(node *ast.Node, entering bool) ast.WalkStatus {
@@ -506,16 +540,18 @@ func (r *PdfRenderer) renderInlineMath(node *ast.Node, entering bool) ast.WalkSt
 }
 
 func (r *PdfRenderer) renderMathBlockCloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	return ast.WalkStop
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderMathBlockContent(node *ast.Node, entering bool) ast.WalkStatus {
-	r.renderCodeBlockLike(node.Tokens)
-	return ast.WalkStop
+	if entering {
+		r.renderCodeBlockLike(node.Tokens)
+	}
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderMathBlockOpenMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	return ast.WalkStop
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderMathBlock(node *ast.Node, entering bool) ast.WalkStatus {
@@ -592,64 +628,74 @@ func (r *PdfRenderer) renderStrikethrough(node *ast.Node, entering bool) ast.Wal
 }
 
 func (r *PdfRenderer) renderStrikethrough1OpenMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pushX(r.pdf.GetX())
-	return ast.WalkStop
+	if entering {
+		r.pushX(r.pdf.GetX())
+	}
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderStrikethrough1CloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	x := r.popX()
-	r.pdf.Line(x, r.pdf.GetY()+float64(r.fontSize)/2, r.pdf.GetX(), r.pdf.GetY()+float64(r.fontSize)/2)
-	return ast.WalkStop
+	if entering {
+		x := r.popX()
+		r.pdf.Line(x, r.pdf.GetY()+float64(r.fontSize)/2, r.pdf.GetX(), r.pdf.GetY()+float64(r.fontSize)/2)
+	}
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderStrikethrough2OpenMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pushX(r.pdf.GetX())
-	return ast.WalkStop
+	if entering {
+		r.pushX(r.pdf.GetX())
+	}
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderStrikethrough2CloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	x := r.popX()
-	r.pdf.Line(x, r.pdf.GetY()+float64(r.fontSize)/2, r.pdf.GetX(), r.pdf.GetY()+float64(r.fontSize)/2)
-	return ast.WalkStop
+	if entering {
+		x := r.popX()
+		r.pdf.Line(x, r.pdf.GetY()+float64(r.fontSize)/2, r.pdf.GetX(), r.pdf.GetY()+float64(r.fontSize)/2)
+	}
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderLinkTitle(node *ast.Node, entering bool) ast.WalkStatus {
-	return ast.WalkStop
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderLinkDest(node *ast.Node, entering bool) ast.WalkStatus {
-	return ast.WalkStop
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderLinkSpace(node *ast.Node, entering bool) ast.WalkStatus {
-	return ast.WalkStop
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderLinkText(node *ast.Node, entering bool) ast.WalkStatus {
-	if ast.NodeImage != node.Parent.Type {
-		r.Write(node.Tokens)
+	if entering {
+		if ast.NodeImage != node.Parent.Type {
+			r.Write(node.Tokens)
+		}
 	}
-	return ast.WalkStop
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderCloseParen(node *ast.Node, entering bool) ast.WalkStatus {
-	return ast.WalkStop
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderOpenParen(node *ast.Node, entering bool) ast.WalkStatus {
-	return ast.WalkStop
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderCloseBracket(node *ast.Node, entering bool) ast.WalkStatus {
-	return ast.WalkStop
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderOpenBracket(node *ast.Node, entering bool) ast.WalkStatus {
-	return ast.WalkStop
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderBang(node *ast.Node, entering bool) ast.WalkStatus {
-	return ast.WalkStop
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderImage(node *ast.Node, entering bool) ast.WalkStatus {
@@ -705,13 +751,17 @@ func (r *PdfRenderer) renderLink(node *ast.Node, entering bool) ast.WalkStatus {
 }
 
 func (r *PdfRenderer) renderHTML(node *ast.Node, entering bool) ast.WalkStatus {
-	r.renderCodeBlockLike(node.Tokens)
-	return ast.WalkStop
+	if entering {
+		r.renderCodeBlockLike(node.Tokens)
+	}
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderInlineHTML(node *ast.Node, entering bool) ast.WalkStatus {
-	r.renderCodeSpanLike(node.Tokens)
-	return ast.WalkStop
+	if entering {
+		r.renderCodeSpanLike(node.Tokens)
+	}
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderDocument(node *ast.Node, entering bool) ast.WalkStatus {
@@ -755,9 +805,11 @@ func (r *PdfRenderer) renderParagraph(node *ast.Node, entering bool) ast.WalkSta
 }
 
 func (r *PdfRenderer) renderText(node *ast.Node, entering bool) ast.WalkStatus {
-	text := util.BytesToStr(node.Tokens)
-	r.WriteString(text)
-	return ast.WalkStop
+	if entering {
+		text := util.BytesToStr(node.Tokens)
+		r.WriteString(text)
+	}
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderCodeSpan(node *ast.Node, entering bool) ast.WalkStatus {
@@ -765,16 +817,18 @@ func (r *PdfRenderer) renderCodeSpan(node *ast.Node, entering bool) ast.WalkStat
 }
 
 func (r *PdfRenderer) renderCodeSpanOpenMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	return ast.WalkStop
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderCodeSpanContent(node *ast.Node, entering bool) ast.WalkStatus {
-	r.renderCodeSpanLike(node.Tokens)
-	return ast.WalkStop
+	if entering {
+		r.renderCodeSpanLike(node.Tokens)
+	}
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderCodeSpanCloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	return ast.WalkStop
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderEmphasis(node *ast.Node, entering bool) ast.WalkStatus {
@@ -782,23 +836,31 @@ func (r *PdfRenderer) renderEmphasis(node *ast.Node, entering bool) ast.WalkStat
 }
 
 func (r *PdfRenderer) renderEmAsteriskOpenMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pushFont(&Font{"italic", "I", r.fontSize})
-	return ast.WalkStop
+	if entering {
+		r.pushFont(&Font{"italic", "I", r.fontSize})
+	}
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderEmAsteriskCloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.popFont()
-	return ast.WalkStop
+	if entering {
+		r.popFont()
+	}
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderEmUnderscoreOpenMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pushFont(&Font{"italic", "I", r.fontSize})
-	return ast.WalkStop
+	if entering {
+		r.pushFont(&Font{"italic", "I", r.fontSize})
+	}
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderEmUnderscoreCloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.popFont()
-	return ast.WalkStop
+	if entering {
+		r.popFont()
+	}
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderStrong(node *ast.Node, entering bool) ast.WalkStatus {
@@ -806,23 +868,31 @@ func (r *PdfRenderer) renderStrong(node *ast.Node, entering bool) ast.WalkStatus
 }
 
 func (r *PdfRenderer) renderStrongA6kOpenMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pushFont(&Font{"bold", "B", r.fontSize})
-	return ast.WalkStop
+	if entering {
+		r.pushFont(&Font{"bold", "B", r.fontSize})
+	}
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderStrongA6kCloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.popFont()
-	return ast.WalkStop
+	if entering {
+		r.popFont()
+	}
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderStrongU8eOpenMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.pushFont(&Font{"bold", "B", r.fontSize})
-	return ast.WalkStop
+	if entering {
+		r.pushFont(&Font{"bold", "B", r.fontSize})
+	}
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderStrongU8eCloseMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	r.popFont()
-	return ast.WalkStop
+	if entering {
+		r.popFont()
+	}
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderBlockquote(node *ast.Node, entering bool) ast.WalkStatus {
@@ -840,7 +910,7 @@ func (r *PdfRenderer) renderBlockquote(node *ast.Node, entering bool) ast.WalkSt
 }
 
 func (r *PdfRenderer) renderBlockquoteMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	return ast.WalkStop
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderHeading(node *ast.Node, entering bool) ast.WalkStatus {
@@ -874,7 +944,7 @@ func (r *PdfRenderer) renderHeading(node *ast.Node, entering bool) ast.WalkStatu
 }
 
 func (r *PdfRenderer) renderHeadingC8hMarker(node *ast.Node, entering bool) ast.WalkStatus {
-	return ast.WalkStop
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderList(node *ast.Node, entering bool) ast.WalkStatus {
@@ -928,24 +998,30 @@ func (r *PdfRenderer) renderTaskListItemMarker(node *ast.Node, entering bool) as
 }
 
 func (r *PdfRenderer) renderThematicBreak(node *ast.Node, entering bool) ast.WalkStatus {
-	r.Newline()
-	r.pdf.SetY(r.pdf.GetY() + 14)
-	r.pdf.SetStrokeColor(106, 115, 125)
-	r.pdf.Line(r.pdf.GetX()+float64(r.fontSize), r.pdf.GetY(), r.pageSize.W-r.margin-float64(r.fontSize), r.pdf.GetY())
-	r.pdf.SetY(r.pdf.GetY() + 12)
-	r.pdf.SetStrokeColor(0, 0, 0)
-	r.Newline()
-	return ast.WalkStop
+	if entering {
+		r.Newline()
+		r.pdf.SetY(r.pdf.GetY() + 14)
+		r.pdf.SetStrokeColor(106, 115, 125)
+		r.pdf.Line(r.pdf.GetX()+float64(r.fontSize), r.pdf.GetY(), r.pageSize.W-r.margin-float64(r.fontSize), r.pdf.GetY())
+		r.pdf.SetY(r.pdf.GetY() + 12)
+		r.pdf.SetStrokeColor(0, 0, 0)
+		r.Newline()
+	}
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderHardBreak(node *ast.Node, entering bool) ast.WalkStatus {
-	r.Newline()
-	return ast.WalkStop
+	if entering {
+		r.Newline()
+	}
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) renderSoftBreak(node *ast.Node, entering bool) ast.WalkStatus {
-	r.Newline()
-	return ast.WalkStop
+	if entering {
+		r.Newline()
+	}
+	return ast.WalkContinue
 }
 
 func (r *PdfRenderer) pushX(x float64) {
@@ -1184,7 +1260,7 @@ func (r *PdfRenderer) addPage() {
 }
 
 func (r *PdfRenderer) renderFooter() {
-	if r.needRenderFootnotesDef {
+	if 0 < len(r.FootnotesDefs) {
 		return
 	}
 	footer := r.Cover.LinkLabel + r.Cover.Title
