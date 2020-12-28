@@ -154,10 +154,10 @@ func (r *PdfRenderer) RenderCover() {
 }
 
 // NewPdfRenderer 创建一个 HTML 渲染器。
-func NewPdfRenderer(tree *parse.Tree, regularFont, boldFont, italicFont string) *PdfRenderer {
+func NewPdfRenderer(tree *parse.Tree, options *render.Options, regularFont, boldFont, italicFont string) *PdfRenderer {
 	pdf := &gopdf.GoPdf{}
 
-	ret := &PdfRenderer{BaseRenderer: render.NewBaseRenderer(tree), pdf: pdf}
+	ret := &PdfRenderer{BaseRenderer: render.NewBaseRenderer(tree, options), pdf: pdf}
 	ret.zoom = 0.8
 	ret.fontSize = int(math.Floor(14 * ret.zoom))
 	ret.lineHeight = 24.0 * ret.zoom
@@ -300,7 +300,7 @@ func (r *PdfRenderer) Render() (output []byte) {
 		return render(n, entering)
 	})
 
-	if r.Option.Footnotes && 0 < len(r.FootnotesDefs) {
+	if 0 < len(r.FootnotesDefs) {
 		output = r.RenderFootnotesDefs(r.Tree.Context)
 	}
 	return
@@ -496,7 +496,7 @@ func (r *PdfRenderer) renderEmojiAlias(node *ast.Node, entering bool) ast.WalkSt
 	if entering {
 		r.pushFont(&Font{"emoji", "R", r.fontSize})
 		alias := node.Tokens[1 : len(node.Tokens)-1]
-		r.WriteString(r.Option.AliasEmoji[string(alias)])
+		r.Write(alias)
 		r.popFont()
 	}
 	return ast.WalkContinue
@@ -575,7 +575,7 @@ func (r *PdfRenderer) renderTableCell(node *ast.Node, entering bool) ast.WalkSta
 		cols := float64(r.tableCols(node))
 		maxWidth := (r.pageSize.W - r.margin*2) / cols
 		if node.Parent.FirstChild != node {
-			prevWidth, _ := r.pdf.MeasureTextWidth(util.BytesToStr(node.Previous.TableCellContent))
+			prevWidth, _ := r.pdf.MeasureTextWidth(strings.Repeat("爱", node.Previous.TableCellContentWidth))
 			x += maxWidth - prevWidth
 			r.pdf.SetX(x)
 		}
@@ -743,7 +743,7 @@ func (r *PdfRenderer) renderLink(node *ast.Node, entering bool) ast.WalkStatus {
 		width := r.pdf.GetX() - x
 		dest := node.ChildByType(ast.NodeLinkDest)
 		destTokens := dest.Tokens
-		destTokens = r.Tree.Context.RelativePath(destTokens)
+		destTokens = r.RelativePath(destTokens)
 		r.pdf.AddExternalLink(util.BytesToStr(destTokens), x, r.pdf.GetY(), width, r.lineHeight)
 		r.popTextColor()
 	}
@@ -969,7 +969,7 @@ func (r *PdfRenderer) renderListItem(node *ast.Node, entering bool) ast.WalkStat
 			r.pdf.SetX(r.pdf.GetX() + indent)
 		}
 
-		if 3 == node.ListData.Typ && "" != r.Option.GFMTaskListItemClass &&
+		if 3 == node.ListData.Typ && "" != r.Options.GFMTaskListItemClass &&
 			nil != node.FirstChild && nil != node.FirstChild.FirstChild && ast.NodeTaskListItemMarker == node.FirstChild.FirstChild.Type {
 			r.WriteString(fmt.Sprintf("%s", node.ListData.Marker))
 		} else {

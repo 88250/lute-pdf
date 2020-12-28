@@ -13,6 +13,7 @@ package main
 import (
 	"bytes"
 	"flag"
+	"github.com/88250/lute/render"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -72,30 +73,22 @@ func main() {
 	coverLogoTitle := trimQuote(*argCoverLogoTitle)
 	coverLogoTitleLink := trimQuote(*argCoverLogoTitleLink)
 
-	options := &parse.Options{
-		GFMTable:            true,
-		GFMTaskListItem:     true,
-		GFMStrikethrough:    true,
-		GFMAutoLink:         true,
-		SoftBreak2HardBreak: true,
-		Emoji:               true,
-		Footnotes:           true,
-		YamlFrontMatter:     true,
-	}
-	options.AliasEmoji, options.EmojiAlias = parse.NewEmojis()
-
+	parseOptions := parse.NewOptions()
+	parseOptions.AliasEmoji, parseOptions.EmojiAlias = parse.NewEmojis()
 	markdown, err := ioutil.ReadFile(mdPath)
 	if nil != err {
 		logger.Fatal(err)
 	}
 
 	markdown = bytes.ReplaceAll(markdown, []byte("\t"), []byte("    "))
-	for emojiUnicode, emojiAlias := range options.EmojiAlias {
+	for emojiUnicode, emojiAlias := range parseOptions.EmojiAlias {
 		markdown = bytes.ReplaceAll(markdown, []byte(emojiUnicode), []byte(":"+emojiAlias+":"))
 	}
 
-	tree := parse.Parse("", markdown, options)
-	renderer := NewPdfRenderer(tree, regularFontPath, boldFontPath, italicFontPath)
+	tree := parse.Parse("", markdown, parseOptions)
+
+	renderOptions := render.NewOptions()
+	renderer := NewPdfRenderer(tree, renderOptions, regularFontPath, boldFontPath, italicFontPath)
 	renderer.Cover = &PdfCover{
 		Title:         coverTitle,
 		AuthorLabel:   coverAuthorLabel,
