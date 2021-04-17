@@ -44,7 +44,7 @@ func main() {
 	argCoverSourceLink := flag.String("coverSourceLink", "https://github.com", "封面 - 来源网站链接")
 	argCoverLicense := flag.String("coverLicense", "署名-相同方式共享 4.0 国际 (CC BY-SA 4.0)", "封面 - 文档许可协议")
 	argCoverLicenseLink := flag.String("coverLicenseLink", "https://creativecommons.org/licenses/by-sa/4.0/", "封面 - 文档许可协议链接")
-	argCoverLogoLink := flag.String("coverLogoLink", "https://static.b3log.org/images/brand/b3log-128.png", "封面 - 图标链接")
+	argCoverLogoLink := flag.String("coverLogoLink", "https://b3log.org/images/brand/b3log-128.png", "封面 - 图标链接")
 	argCoverLogoTitle := flag.String("coverLogoTitle", "B3log 开源", "封面 - 图标标题")
 	argCoverLogoTitleLink := flag.String("coverLogoTitleLink", "https://b3log.org", "封面 - 图标标题链接")
 
@@ -74,7 +74,6 @@ func main() {
 	coverLogoTitleLink := trimQuote(*argCoverLogoTitleLink)
 
 	parseOptions := parse.NewOptions()
-	parseOptions.AliasEmoji, parseOptions.EmojiAlias = parse.NewEmojis()
 	markdown, err := ioutil.ReadFile(mdPath)
 	if nil != err {
 		logger.Fatal(err)
