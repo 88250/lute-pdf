@@ -786,7 +786,7 @@ func (r *PdfRenderer) renderParagraph(node *ast.Node, entering bool) ast.WalkSta
 	inTightList := false
 	if nil != grandparent && ast.NodeList == grandparent.Type {
 		inList = true
-		inTightList = grandparent.Tight
+		inTightList = grandparent.ListData.Tight
 	}
 
 	if inTightList { // List.ListItem.Paragraph
@@ -973,10 +973,10 @@ func (r *PdfRenderer) renderListItem(node *ast.Node, entering bool) ast.WalkStat
 			nil != node.FirstChild && nil != node.FirstChild.FirstChild && ast.NodeTaskListItemMarker == node.FirstChild.FirstChild.Type {
 			r.WriteString(fmt.Sprintf("%s", node.ListData.Marker))
 		} else {
-			if 0 != node.BulletChar {
+			if 0 != node.ListData.BulletChar {
 				r.WriteString("● ")
 			} else {
-				r.WriteString(fmt.Sprint(node.Num) + ". ")
+				r.WriteString(fmt.Sprint(node.ListData.Num) + ". ")
 			}
 		}
 	} else {
